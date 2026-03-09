@@ -444,7 +444,7 @@
     addMessage('user', question);
     addTyping();
     try {
-      const res = await fetch('/.netlify/functions/chat', {
+      const res = await fetch('/.netlify/functions/get-credits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
         body: JSON.stringify({ question })
