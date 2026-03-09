@@ -33,7 +33,14 @@ exports.handler = async (event) => {
     });
     const profiles = await profileRes.json();
     const profile = profiles[0];
-    if (!profile) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Profile not found' }) };
+    if (!profile) {
+  await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ id: userData.id, credits: 3, total_tokens_used: 0, total_spent_cents: 0 })
+  });
+  profile = { credits: 3, total_tokens_used: 0, total_spent_cents: 0 };
+}
     if (profile.credits <= 0) return { statusCode: 402, headers, body: JSON.stringify({ error: 'no_credits', message: 'No credits remaining.' }) };
 
     const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/global_stats?key=eq.total_cost_usd&select=value`, {
