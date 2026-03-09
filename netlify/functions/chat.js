@@ -72,7 +72,7 @@ exports.handler = async (event) => {
     const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userData.id}`, {
   method: 'PATCH',
   headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-  body: JSON.stringify({ credits: profile.credits - 1, total_tokens_used: (profile.total_tokens_used || 0) + tokIn + tokOut, total_spent_cents: Math.ceil(thisCost * 10000) / 100 })
+  body: JSON.stringify({ credits: profile.credits - 1, total_tokens_used: (profile.total_tokens_used || 0) + tokIn + tokOut, total_spent_cents: Math.ceil(thisCost * 10000)})
 });
 console.log('PATCH status:', patchRes.status);
 const patchText = await patchRes.text();
