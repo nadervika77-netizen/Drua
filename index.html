@@ -471,7 +471,7 @@
   async function buyCredits(plan) {
     if (!currentSession) { toggleAuth(); return; }
     try {
-      const res = await fetch('/.netlify/functions/chat', {
+      const res = await fetch('/.netlify/functions/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
         body: JSON.stringify({ plan })
