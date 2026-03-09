@@ -1,87 +1,489 @@
-// netlify/functions/chat.js — zero dependencies version
-exports.handler = async (event) => {
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Content-Type': 'application/json',
-  };
-
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
-  if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
-
-  const ANTHROPIC_API_KEY    = process.env.ANTHROPIC_API_KEY;
-  const SUPABASE_URL         = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const MAX_TOKENS           = parseInt(process.env.MAX_TOKENS_PER_REPLY || '500');
-  const MONTHLY_BUDGET       = parseFloat(process.env.MONTHLY_BUDGET_USD || '50');
-  const COST_IN_PER_1K       = 0.003;
-  const COST_OUT_PER_1K      = 0.015;
-
-  const SYSTEM_PROMPT = `You are Drua, an expert AI consultant specializing in FDA medical device regulatory affairs and quality systems. Your knowledge covers 510(k), PMA, De Novo, 21 CFR Part 820 QSR, MDR (21 CFR Part 803), UDI, ISO 14971, EU MDR, ISO 13485, SaMD, and IDE. Always cite specific FDA guidance documents or CFR sections. Keep responses under 350 words. Do not hallucinate guidance documents. You are speaking to medical device professionals and startup founders.`;
-
-  try {
-    const token = (event.headers.authorization || '').replace('Bearer ', '').trim();
-    if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Not authenticated' }) };
-
-    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_SERVICE_KEY }
-    });
-    const userData = await userRes.json();
-    if (!userData.id) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid session' }) };
-    const userId = userData.id;
-
-    const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=credits,total_tokens_used,total_spent_cents`, {
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY }
-    });
-    const profiles = await profileRes.json();
-    const profile = profiles[0];
-    if (!profile) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Profile not found' }) };
-    if (profile.credits <= 0) return { statusCode: 402, headers, body: JSON.stringify({ error: 'no_credits', message: 'No credits remaining.' }) };
-
-    const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/global_stats?key=eq.total_cost_usd&select=value`, {
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY }
-    });
-    const stats = await statsRes.json();
-    const totalCost = parseFloat(stats[0]?.value || 0);
-    if (totalCost >= MONTHLY_BUDGET) return { statusCode: 503, headers, body: JSON.stringify({ error: 'budget_exceeded' }) };
-
-    const { question } = JSON.parse(event.body || '{}');
-    if (!question?.trim()) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Question required' }) };
-
-    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: MAX_TOKENS, system: SYSTEM_PROMPT, messages: [{ role: 'user', content: question.slice(0, 2000) }] }),
-    });
-    const aiData = await aiRes.json();
-    if (aiData.error) throw new Error(aiData.error.message);
-
-    const answer   = aiData.content[0].text;
-    const tokIn    = aiData.usage.input_tokens;
-    const tokOut   = aiData.usage.output_tokens;
-    const thisCost = (tokIn / 1000 * COST_IN_PER_1K) + (tokOut / 1000 * COST_OUT_PER_1K);
-
-    await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({ credits: profile.credits - 1, total_tokens_used: (profile.total_tokens_used||0)+tokIn+tokOut, total_spent_cents: (profile.total_spent_cents||0)+Math.round(thisCost*100) }),
-    });
-
-    await fetch(`${SUPABASE_URL}/rest/v1/rpc/add_to_global_cost`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: thisCost }),
-    });
-
-    await fetch(`${SUPABASE_URL}/rest/v1/usage_log`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({ user_id: userId, question: question.slice(0,500), tokens_in: tokIn, tokens_out: tokOut, cost_cents: Math.ceil(thisCost*10000)/100 }),
-    });
-
-    return { statusCode: 200, headers, body: JSON.stringify({ answer, credits_remaining: profile.credits - 1, tokens_used: tokIn + tokOut }) };
-  } catch (err) {
-    console.error('Chat error:', err);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drua — Medical Device Regulatory AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --navy: #0a1628;
+    --navy2: #112240;
+    --gold: #c9a84c;
+    --gold2: #e8c96d;
+    --white: #f0ece4;
+    --gray: #8892a4;
+    --border: rgba(201,168,76,0.2);
   }
-};
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--navy2);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    color: var(--gold);
+    letter-spacing: 2px;
+  }
+  .logo span { color: var(--white); font-size: 0.85rem; display: block; letter-spacing: 3px; font-family: 'DM Sans', sans-serif; font-weight: 300; opacity: 0.7; }
+  #credits-display {
+    background: rgba(201,168,76,0.1);
+    border: 1px solid var(--border);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--gold2);
+  }
+  #auth-btn {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+  #auth-btn:hover { background: var(--gold); color: var(--navy); }
+
+  /* AUTH MODAL */
+  #auth-modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,22,40,0.95);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  #auth-modal.show { display: flex; }
+  .modal-box {
+    background: var(--navy2);
+    border: 1px solid var(--border);
+    padding: 48px;
+    width: 400px;
+    border-radius: 8px;
+  }
+  .modal-box h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--gold);
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+  }
+  .modal-box p { color: var(--gray); font-size: 0.9rem; margin-bottom: 32px; }
+  .modal-box input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+    outline: none;
+    transition: border 0.2s;
+  }
+  .modal-box input:focus { border-color: var(--gold); }
+  .modal-box button.primary {
+    width: 100%;
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    padding: 13px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: background 0.2s;
+  }
+  .modal-box button.primary:hover { background: var(--gold2); }
+  .modal-box .toggle { color: var(--gray); font-size: 0.85rem; text-align: center; }
+  .modal-box .toggle a { color: var(--gold); cursor: pointer; text-decoration: none; }
+  #auth-error { color: #e07070; font-size: 0.85rem; margin-bottom: 12px; display: none; }
+
+  /* MAIN */
+  main { flex: 1; display: flex; flex-direction: column; max-width: 860px; width: 100%; margin: 0 auto; padding: 40px 20px; }
+  #welcome {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  #welcome h1 { font-family: 'Playfair Display', serif; font-size: 2.8rem; color: var(--gold); margin-bottom: 16px; }
+  #welcome p { color: var(--gray); font-size: 1.05rem; max-width: 540px; margin: 0 auto 32px; line-height: 1.7; }
+  #welcome button {
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    padding: 14px 36px;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #welcome button:hover { background: var(--gold2); }
+
+  /* CHAT */
+  #chat-area { display: none; flex-direction: column; flex: 1; }
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 400px;
+    max-height: 60vh;
+  }
+  .msg { display: flex; gap: 14px; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 500; flex-shrink: 0;
+  }
+  .msg.bot .avatar { background: rgba(201,168,76,0.15); border: 1px solid var(--border); color: var(--gold); }
+  .msg.user .avatar { background: rgba(255,255,255,0.08); color: var(--white); }
+  .bubble {
+    max-width: 78%;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+  .msg.bot .bubble { background: var(--navy2); border: 1px solid var(--border); }
+  .msg.user .bubble { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.2); }
+  .typing { display: flex; gap: 5px; align-items: center; padding: 14px 18px; }
+  .typing span { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+
+  /* INPUT */
+  .input-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+  #question-input {
+    flex: 1;
+    background: var(--navy2);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 14px 18px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    resize: none;
+    transition: border 0.2s;
+  }
+  #question-input:focus { border-color: var(--gold); }
+  #send-btn {
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    padding: 14px 24px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  #send-btn:hover { background: var(--gold2); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .hint { color: var(--gray); font-size: 0.8rem; text-align: center; margin-top: 10px; }
+
+  /* NO CREDITS */
+  #no-credits {
+    display: none;
+    text-align: center;
+    padding: 40px;
+    background: var(--navy2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 20px;
+  }
+  #no-credits h3 { font-family: 'Playfair Display', serif; color: var(--gold); margin-bottom: 10px; }
+  #no-credits p { color: var(--gray); margin-bottom: 24px; font-size: 0.9rem; }
+  .plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .plan-btn {
+    background: rgba(201,168,76,0.08);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    text-align: left;
+  }
+  .plan-btn:hover { border-color: var(--gold); background: rgba(201,168,76,0.15); }
+  .plan-btn .plan-name { color: var(--gold); font-weight: 500; margin-bottom: 4px; }
+  .plan-btn .plan-price { font-size: 1.1rem; font-weight: 500; }
+  .plan-btn .plan-q { color: var(--gray); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DRUA <span>REGULATORY AI</span></div>
+  <div style="display:flex;gap:16px;align-items:center;">
+    <div id="credits-display" style="display:none;">⬡ <span id="credits-count">0</span> credits</div>
+    <button id="auth-btn" onclick="toggleAuth()">Sign In</button>
+  </div>
+</header>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal">
+  <div class="modal-box">
+    <h2 id="modal-title">Sign In</h2>
+    <p id="modal-sub">Access your regulatory AI consultant</p>
+    <div id="auth-error"></div>
+    <input type="email" id="auth-email" placeholder="Email address" />
+    <input type="password" id="auth-password" placeholder="Password" />
+    <button class="primary" onclick="submitAuth()">Continue</button>
+    <div class="toggle" id="auth-toggle">
+      No account? <a onclick="switchMode()">Create one</a>
+    </div>
+  </div>
+</div>
+
+<main>
+  <!-- WELCOME -->
+  <div id="welcome">
+    <h1>Your Regulatory Counsel</h1>
+    <p>Expert guidance on FDA medical device regulations, 510(k), PMA, ISO 13485, EU MDR, and more — powered by AI trained on regulatory frameworks.</p>
+    <button onclick="toggleAuth()">Get Started</button>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chat-area">
+    <div id="messages"></div>
+    <div id="no-credits">
+      <h3>Credits Required</h3>
+      <p>Purchase credits to continue your regulatory consultation.</p>
+      <div class="plans">
+        <button class="plan-btn" onclick="buyCredits('starter')">
+          <div class="plan-name">Starter</div>
+          <div class="plan-price">$4.99</div>
+          <div class="plan-q">5 questions</div>
+        </button>
+        <button class="plan-btn" onclick="buyCredits('basic')">
+          <div class="plan-name">Basic</div>
+          <div class="plan-price">$14.99</div>
+          <div class="plan-q">20 questions</div>
+        </button>
+        <button class="plan-btn" onclick="buyCredits('pro')">
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">$29.99</div>
+          <div class="plan-q">50 questions</div>
+        </button>
+        <button class="plan-btn" onclick="buyCredits('enterprise')">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-price">$49.99</div>
+          <div class="plan-q">100 questions</div>
+        </button>
+      </div>
+    </div>
+    <div class="input-row">
+      <textarea id="question-input" rows="2" placeholder="Ask a regulatory question..."></textarea>
+      <button id="send-btn" onclick="sendMessage()">Ask Drua</button>
+    </div>
+    <div class="hint">Press Enter to send · Shift+Enter for new line</div>
+  </div>
+</main>
+
+<script>
+  const SUPABASE_URL = 'https://crlywtdwieikawnksqhq.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNybHl3dGR3aWVpa2F3bmtzcWhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxNTM4NjMsImV4cCI6MjA1OTcyOTg2M30.bJkyvw4qEbLMttedRVoDXpzWg1I3m2AaBtuSHvvmq98';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let authMode = 'signin';
+  let currentSession = null;
+
+  async function init() {
+    const { data } = await sb.auth.getSession();
+    if (data.session) onLogin(data.session);
+    sb.auth.onAuthStateChange((event, session) => {
+      if (session) onLogin(session);
+      else onLogout();
+    });
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      addMessage('bot', `✅ Payment successful! Your credits have been added. You can now ask your regulatory questions.`);
+      window.history.replaceState({}, '', '/');
+    }
+  }
+
+  async function onLogin(session) {
+    currentSession = session;
+    document.getElementById('auth-btn').textContent = 'Sign Out';
+    document.getElementById('welcome').style.display = 'none';
+    document.getElementById('chat-area').style.display = 'flex';
+    document.getElementById('auth-modal').classList.remove('show');
+    document.getElementById('credits-display').style.display = 'block';
+    await loadCredits();
+    if (document.getElementById('messages').children.length === 0) {
+      addMessage('bot', `Welcome to Drua. I'm your AI regulatory consultant specializing in FDA medical device regulations. Ask me about 510(k), PMA, ISO 13485, EU MDR, SaMD, or any other regulatory matter.`);
+    }
+  }
+
+  function onLogout() {
+    currentSession = null;
+    document.getElementById('auth-btn').textContent = 'Sign In';
+    document.getElementById('welcome').style.display = 'block';
+    document.getElementById('chat-area').style.display = 'none';
+    document.getElementById('credits-display').style.display = 'none';
+  }
+
+  async function loadCredits() {
+    if (!currentSession) return;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentSession.user.id}&select=credits`, {
+      headers: { Authorization: `Bearer ${currentSession.access_token}`, apikey: SUPABASE_ANON_KEY }
+    });
+    const data = await res.json();
+    const credits = data[0]?.credits ?? 0;
+    document.getElementById('credits-count').textContent = credits;
+    document.getElementById('no-credits').style.display = credits <= 0 ? 'block' : 'none';
+  }
+
+  function toggleAuth() {
+    if (currentSession) { sb.auth.signOut(); return; }
+    document.getElementById('auth-modal').classList.toggle('show');
+  }
+
+  function switchMode() {
+    authMode = authMode === 'signin' ? 'signup' : 'signin';
+    document.getElementById('modal-title').textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+    document.getElementById('auth-toggle').innerHTML = authMode === 'signin'
+      ? 'No account? <a onclick="switchMode()">Create one</a>'
+      : 'Have an account? <a onclick="switchMode()">Sign in</a>';
+  }
+
+  async function submitAuth() {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const errEl = document.getElementById('auth-error');
+    errEl.style.display = 'none';
+    const { error } = authMode === 'signin'
+      ? await sb.auth.signInWithPassword({ email, password })
+      : await sb.auth.signUp({ email, password });
+    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+    else if (authMode === 'signup') {
+      errEl.style.color = '#70c070';
+      errEl.textContent = 'Check your email to confirm your account!';
+      errEl.style.display = 'block';
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.activeElement === document.getElementById('auth-email') ||
+        e.key === 'Enter' && document.activeElement === document.getElementById('auth-password')) {
+      submitAuth();
+    }
+  });
+
+  document.getElementById('question-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function addMessage(role, text) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.innerHTML = `
+      <div class="avatar">${role === 'bot' ? 'AI' : 'YOU'}</div>
+      <div class="bubble">${text.replace(/\n/g, '<br>')}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addTyping() {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg bot'; div.id = 'typing-indicator';
+    div.innerHTML = `<div class="avatar">AI</div><div class="bubble typing"><span></span><span></span><span></span></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  async function sendMessage() {
+    if (!currentSession) { toggleAuth(); return; }
+    const input = document.getElementById('question-input');
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    document.getElementById('send-btn').disabled = true;
+    addMessage('user', question);
+    addTyping();
+    try {
+      const res = await fetch('/.netlify/functions/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        body: JSON.stringify({ question })
+      });
+      const data = await res.json();
+      removeTyping();
+      if (data.error === 'no_credits') {
+        document.getElementById('no-credits').style.display = 'block';
+        addMessage('bot', 'You have no credits remaining. Please purchase credits to continue.');
+      } else if (data.answer) {
+        addMessage('bot', data.answer);
+        document.getElementById('credits-count').textContent = data.credits_remaining;
+        if (data.credits_remaining <= 0) document.getElementById('no-credits').style.display = 'block';
+      } else {
+        addMessage('bot', `Sorry, something went wrong: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      removeTyping();
+      addMessage('bot', 'Connection error. Please try again.');
+    }
+    document.getElementById('send-btn').disabled = false;
+  }
+
+  async function buyCredits(plan) {
+    if (!currentSession) { toggleAuth(); return; }
+    try {
+      const res = await fetch('/.netlify/functions/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        body: JSON.stringify({ plan })
+      });
+      const data = await res.json();
+      if (data.checkout_url) window.location.href = data.checkout_url;
+    } catch (err) {
+      alert('Error initiating checkout. Please try again.');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
