@@ -166,6 +166,7 @@
   <div class="logo">DRUA <span>REGULATORY AI</span></div>
   <div style="display:flex;gap:16px;align-items:center;">
     <div id="credits-display" style="display:none;">⬡ <span id="credits-count">0</span> credits</div>
+    <a href="mailto:victoria@druaconsulting.com" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 16px;border-radius:4px;font-size:0.85rem;text-decoration:none;white-space:nowrap;">Work With Us</a>
     <button id="auth-btn" onclick="toggleAuth()">Sign In</button>
   </div>
 </header>
@@ -187,6 +188,7 @@
         <button class="plan-btn" onclick="buyCredits('pro')"><div class="plan-name">Pro</div><div class="plan-price">$29.99</div><div class="plan-q">50 questions</div></button>
         <button class="plan-btn" onclick="buyCredits('enterprise')"><div class="plan-name">Enterprise</div><div class="plan-price">$49.99</div><div class="plan-q">100 questions</div></button>
       </div>
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(201,168,76,0.2);color:#8892a4;font-size:0.9rem;">Need expert review of your FDA submission? <a href="mailto:victoria@druaconsulting.com" style="color:#c9a84c;">Contact victoria@druaconsulting.com</a></div>
     </div>
     <div class="input-row">
       <textarea id="question-input" rows="2" placeholder="Ask a regulatory question..."></textarea>
@@ -239,7 +241,14 @@
     });
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
-      addMessage('bot', '✅ Payment successful! Your credits have been added.');
+      function addMessage(role, text) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.innerHTML = `<div class="avatar">${role === 'bot' ? 'AI' : 'YOU'}</div><div class="bubble">${text.replace(/\n/g, '<br>')}${role === 'bot' ? '<div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(201,168,76,0.15);font-size:0.8rem;color:#8892a4;">Need hands-on help? <a href="mailto:victoria@druaconsulting.com" style="color:#c9a84c;">Contact us to review your submission →</a></div>' : ''}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }('bot', '✅ Payment successful! Your credits have been added.');
       window.history.replaceState({}, '', '/');
     }
   }
