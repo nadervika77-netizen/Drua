@@ -240,9 +240,9 @@
   <div class="logo">DRUA <span>REGULATORY AI</span></div>
   <div style="display:flex;gap:12px;align-items:center;">
     <div id="credits-display" style="display:none;">⬡ <span id="credits-count">0</span> credits</div>
-    <a href="/" style="background:transparent;border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">Chat with Drua</a>
     <a href="/about.html" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">About</a>
     <a href="/services.html" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">Services</a>
+    <a href="/" style="background:transparent;border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">Chat with Drua</a>
     <a href="/contact.html" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">Contact</a>
     <button id="auth-btn" onclick="toggleAuth()">Sign In</button>
   </div>
@@ -290,137 +290,14 @@
   <div id="upload-status"></div>
 </div>
 
-<!-- ── SERVICES SHOP SECTION ── -->
-<section id="services-section">
-  <div class="services-inner">
-    <div class="services-header">
-      <div class="services-eyebrow">Expert Review Services</div>
-      <h2>Work Directly with Victoria</h2>
-      <p>Have a former FDA investigator personally review your submissions and quality documents. Sign in to purchase.</p>
-    </div>
-
-    <div class="svc-filters">
-      <button class="svc-filter active" data-svc-filter="all">All Services</button>
-      <button class="svc-filter" data-svc-filter="fda">FDA</button>
-      <button class="svc-filter" data-svc-filter="eu">EU MDR</button>
-      <button class="svc-filter" data-svc-filter="quality">Quality & QMS</button>
-    </div>
-
-    <div class="svc-grid">
-
-      <div class="svc-card" data-svc-cat="fda">
-        <div class="svc-tag">FDA</div>
-        <div class="svc-name">FDA 513(g) Request for Information Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$1,000 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('fda_513g')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="fda">
-        <div class="svc-tag">FDA</div>
-        <div class="svc-name">FDA Pre-Submission (Q-Sub) Meeting Package Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$1,000 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('fda_presub')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="quality">
-        <div class="svc-tag">Quality & QMS</div>
-        <div class="svc-name">Corrective and Preventive Action (CAPA) System Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$1,500 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('capa_review')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="quality">
-        <div class="svc-tag">Quality & QMS</div>
-        <div class="svc-name">Device History Record (DHR) Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$1,500 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('dhr_review')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="quality">
-        <div class="svc-tag">Quality & QMS</div>
-        <div class="svc-name">ISO 13485 QMS Implementation Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$1,500 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('iso_qms')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="quality">
-        <div class="svc-tag">Quality & QMS</div>
-        <div class="svc-name">FDA QSR / ISO 13485 Gap Assessment</div>
-        <div class="svc-footer">
-          <div class="svc-price">$3,500 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('fda_qsr_gap')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="fda">
-        <div class="svc-tag">FDA</div>
-        <div class="svc-name">FDA Premarket Notification 510(k) Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$5,000 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('fda_510k')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="eu">
-        <div class="svc-tag">EU MDR</div>
-        <div class="svc-name">EU MDR Technical File Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$8,000 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('eu_mdr_tech')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="fda">
-        <div class="svc-tag">FDA</div>
-        <div class="svc-name">Design History File (DHF) Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$8,000 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('dhf_review')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="fda">
-        <div class="svc-tag">FDA</div>
-        <div class="svc-name">FDA De Novo Classification Request Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$8,000 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('fda_denovo')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="quality">
-        <div class="svc-tag">Quality & QMS</div>
-        <div class="svc-name">Conduct Internal Quality Audit</div>
-        <div class="svc-footer">
-          <div class="svc-price">$10,000 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('quality_audit')">Purchase</button>
-        </div>
-      </div>
-
-      <div class="svc-card" data-svc-cat="fda">
-        <div class="svc-tag">FDA</div>
-        <div class="svc-name">FDA Premarket Approval (PMA) Application Review</div>
-        <div class="svc-footer">
-          <div class="svc-price">$50,000 <small>per engagement</small></div>
-          <button class="svc-buy" onclick="buyReview('fda_pma')">Purchase</button>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="svc-cta">
-      Not sure which service you need? <a href="https://www.druaconsulting.com/contact">Contact Victoria directly →</a>
-    </div>
+<!-- ── CONTACT CTA ── -->
+<section style="padding: 64px 24px; text-align: center; border-top: 1px solid var(--border);">
+  <div style="max-width: 520px; margin: 0 auto;">
+    <div style="font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--gold); margin-bottom: 16px;">Work With Victoria</div>
+    <h2 style="font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--white); margin-bottom: 16px;">Ready to move forward?</h2>
+    <p style="color: var(--gray); font-size: 0.95rem; line-height: 1.8; margin-bottom: 32px;">Have a former FDA investigator personally review your submissions and quality documents. Reach out to get started.</p>
+    <a href="/contact.html" style="display: inline-block; background: var(--gold); color: var(--navy); padding: 14px 36px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.95rem; text-decoration: none; border-radius: 4px; letter-spacing: 1px;">Contact Victoria →</a>
+    <div style="margin-top: 16px;"><a href="/services.html" style="color: var(--gray); font-size: 0.85rem; text-decoration: none; border-bottom: 1px solid rgba(201,168,76,0.2);">View all services</a></div>
   </div>
 </section>
 
