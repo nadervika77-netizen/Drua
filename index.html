@@ -368,6 +368,41 @@
     if (t) t.remove();
   }
 
+  async function sendMessage() {
+    if (!currentSession) { toggleAuth(); return; }
+    const input = document.getElementById('question-input');
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    document.getElementById('send-btn').disabled = true;
+    addMessage('user', question);
+    addTyping();
+    try {
+      const res = await fetch('/.netlify/functions/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        body: JSON.stringify({ question })
+      });
+      const data = await res.json();
+      removeTyping();
+      if (data.error === 'no_credits') {
+        document.getElementById('no-credits').style.display = 'block';
+        addMessage('bot', 'You have no credits remaining. Please purchase credits to continue.');
+      } else if (data.answer) {
+        addMessage('bot', data.answer);
+        showTemplateButton();
+        document.getElementById('credits-count').textContent = data.credits_remaining;
+        if (data.credits_remaining <= 0) document.getElementById('no-credits').style.display = 'block';
+      } else {
+        addMessage('bot', `Sorry, something went wrong: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      removeTyping();
+      addMessage('bot', 'Connection error. Please try again.');
+    }
+    document.getElementById('send-btn').disabled = false;
+  }
+
   // ── SMART TEMPLATE DETECTION ──────────────────────────────────────────────
   // Reads the full conversation and returns only the templates that are relevant.
   // Falls back to showing all four if no specific topic is detected.
