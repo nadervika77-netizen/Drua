@@ -6,7 +6,7 @@ exports.handler = async (event) => {
   const STRIPE_SECRET_KEY    = process.env.STRIPE_SECRET_KEY;
   const SUPABASE_URL         = process.env.SUPABASE_URL;
   const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const APP_URL              = process.env.APP_URL || 'https://chic-torrone-565f3c.netlify.app';
+  const APP_URL              = process.env.APP_URL || 'https://www.druaconsulting.com/chat';
 
   const PLANS = {
     starter:    { credits: 5,   amount: 499,  label: '5 Regulatory Questions' },
@@ -38,8 +38,8 @@ exports.handler = async (event) => {
     params.append('metadata[user_id]', userData.id);
     params.append('metadata[plan]', plan);
     params.append('metadata[credits]', selectedPlan.credits.toString());
-    params.append('success_url', `${APP_URL}/?payment=success&credits=${selectedPlan.credits}`);
-    params.append('cancel_url', `${APP_URL}/?payment=cancelled`);
+    params.append('success_url', `${APP_URL}?payment=success&credits=${selectedPlan.credits}`);
+    params.append('cancel_url', `${APP_URL}?payment=cancelled`);
 
     const sessionRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
