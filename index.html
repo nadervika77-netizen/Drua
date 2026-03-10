@@ -413,6 +413,21 @@
       alert('Error initiating checkout. Please try again.');
     }
   }
+  async function buyReview(service) {
+    if (!currentSession) { toggleAuth(); return; }
+    try {
+      const res = await fetch('/.netlify/functions/review-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        body: JSON.stringify({ service })
+      });
+      const data = await res.json();
+      if (data.checkout_url) window.location.href = data.checkout_url;
+    } catch (err) {
+      alert('Error initiating checkout. Please try again.');
+    }
+  }
+  
 
   init();
 </script>
