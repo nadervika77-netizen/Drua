@@ -96,6 +96,17 @@
   @media (max-width: 900px) { .svc-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 580px) { .svc-grid { grid-template-columns: 1fr; } header { padding: 16px 20px; } }
 </style>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Drua">
+  <meta name="theme-color" content="#0a1628">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+    }
+  </script>
 </head>
 <body>
 
