@@ -29,8 +29,38 @@ IMPORTANT INSTRUCTIONS:
 
   try {
     const token = (event.headers.authorization || '').replace('Bearer ', '').trim();
-    if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Not authenticated' }) };
+    const isGuest = !token;
 
+    // ── GUEST MODE (first 3 free questions, no account needed) ──────────────
+    if (isGuest) {
+      const { question } = JSON.parse(event.body || '{}');
+      if (!question?.trim()) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Question required' }) };
+
+      // Check monthly budget
+      const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/global_stats?key=eq.total_cost_usd&select=value`, {
+        headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY }
+      });
+      const stats = await statsRes.json();
+      const totalCost = parseFloat(stats[0]?.value || 0);
+      if (totalCost >= MONTHLY_BUDGET_USD) return { statusCode: 503, headers, body: JSON.stringify({ error: 'budget_exceeded' }) };
+
+      const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: MAX_TOKENS,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: question.slice(0, 2000) }]
+        })
+      });
+      const aiData = await aiRes.json();
+      const answer = aiData.content[0].text;
+
+      return { statusCode: 200, headers, body: JSON.stringify({ answer, guest: true }) };
+    }
+
+    // ── AUTHENTICATED MODE ───────────────────────────────────────────────────
     const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_SERVICE_KEY }
     });
@@ -80,14 +110,11 @@ IMPORTANT INSTRUCTIONS:
     const tokOut = aiData.usage.output_tokens;
     const thisCost = (tokIn / 1000 * COST_IN_PER_1K) + (tokOut / 1000 * COST_OUT_PER_1K);
 
-    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userData.id}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userData.id}`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, apikey: SUPABASE_SERVICE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
       body: JSON.stringify({ credits: profile.credits - 1, total_tokens_used: (profile.total_tokens_used || 0) + tokIn + tokOut, total_spent_cents: Math.ceil(thisCost * 10000) })
     });
-    console.log('PATCH status:', patchRes.status);
-    const patchText = await patchRes.text();
-    console.log('PATCH response:', patchText);
 
     await fetch(`${SUPABASE_URL}/rest/v1/usage_log`, {
       method: 'POST',
