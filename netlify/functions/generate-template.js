@@ -214,7 +214,7 @@ JSON only, no markdown, no explanation.`;
       new Paragraph({
         children: [
           new TextRun({ text: 'Next Steps: ', bold: true, size: 20 }),
-          new TextRun({ text: 'Complete all sections marked [TO BE COMPLETED BY APPLICANT], then contact Victoria at victoria@druaconsulting.com for expert review before FDA submission.', size: 20 })
+          new TextRun({ text: ''Next Steps: (1) Complete all sections marked [TO BE COMPLETED BY APPLICANT] using the Drua chatbot for guidance. (2) Return to the chatbot and purchase an Expert Review service. (3) Upload this completed document for Victoria\'s professional review before FDA submission. Questions? Contact victoria@druaconsulting.com'', size: 20 })
         ],
         border: { top: { style: BorderStyle.SINGLE, size: 1, color: 'C9A84C' } },
         spacing: { before: 200 }
