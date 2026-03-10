@@ -606,17 +606,4 @@
           document.querySelector('#upload-area .upload-btn').style.opacity = '0.5';
         } else {
           statusEl.style.color = '#e07070';
-          statusEl.textContent = '❌ ' + (data.error || 'Upload failed. Please try again.');
-        }
-      } catch (err) {
-        statusEl.style.color = '#e07070';
-        statusEl.textContent = '❌ Connection error. Please try again.';
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
-  init();
-</script>
-</body>
-</html>
+          statusEl.te
