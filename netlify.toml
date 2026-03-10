@@ -6,3 +6,4 @@
   from = "/"
   to = "/about.html"
   status = 302
+  force = true
