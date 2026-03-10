@@ -567,7 +567,7 @@
           document.querySelector('#upload-area .upload-btn').style.opacity = '0.5';
         } else {
           statusEl.style.color = '#e07070';
-          xtContent = '❌ ' + (data.error || 'Upload failed. Please try again.');
+          statusEl.textContent = '❌ ' + (data.error || 'Upload failed. Please try again.');
         }
       } catch (err) {
         statusEl.style.color = '#e07070';
