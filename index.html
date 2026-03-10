@@ -386,7 +386,8 @@
         document.getElementById('no-credits').style.display = 'block';
         addMessage('bot', 'You have no credits remaining. Please purchase credits to continue.');
       } else if (data.answer) {
-        addMessage('bot', data.answer);
+        addMessage('bot', data.answer);const templateType = detectTemplateType(data.answer + question);
+if (templateType) showTemplateButton(templateType);
         document.getElementById('credits-count').textContent = data.credits_remaining;
         if (data.credits_remaining <= 0) document.getElementById('no-credits').style.display = 'block';
       } else {
@@ -413,7 +414,60 @@
       alert('Error initiating checkout. Please try again.');
     }
   }
-  async function buyReview(service) {
+  function detectTemplateType(text) {
+  const t = text.toLowerCase();
+  if (t.includes('510(k)') || t.includes('510k')) return '510k';
+  if (t.includes('pre-submission') || t.includes('q-sub') || t.includes('presub')) return 'presub';
+  if (t.includes('513(g)') || t.includes('513g')) return '513g';
+  return null;
+}
+
+function showTemplateButton(type) {
+  const existing = document.getElementById('template-btn-area');
+  if (existing) existing.remove();
+  const names = { '510k': '510(k) Submission', 'presub': 'Pre-Submission (Q-Sub)', '513g': '513(g) Request' };
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.id = 'template-btn-area';
+  div.style.cssText = 'text-align:center;padding:16px;';
+  div.innerHTML = `<button onclick="generateTemplate('${type}')" style="background:var(--gold);color:var(--navy);border:none;padding:12px 28px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;font-size:0.95rem;">⬇ Generate ${names[type]} Template</button>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function generateTemplate(type) {
+  if (!currentSession) { toggleAuth(); return; }
+  const btn = document.querySelector('#template-btn-area button');
+  btn.textContent = 'Generating your template...';
+  btn.disabled = true;
+  const msgs = [...document.querySelectorAll('.msg')].map(m => ({
+    role: m.classList.contains('user') ? 'user' : 'bot',
+    text: m.querySelector('.bubble')?.innerText || ''
+  }));
+  try {
+    const res = await fetch('/.netlify/functions/generate-template', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+      body: JSON.stringify({ templateType: type, conversation: msgs })
+    });
+    const data = await res.json();
+    if (data.docx_base64) {
+      const bytes = Uint8Array.from(atob(data.docx_base64), c => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = data.filename; a.click();
+      URL.revokeObjectURL(url);
+      btn.textContent = '✅ Template Downloaded!';
+    } else {
+      btn.textContent = 'Error — Try Again';
+      btn.disabled = false;
+    }
+  } catch {
+    btn.textContent = 'Error — Try Again';
+    btn.disabled = false;
+  }
+}async function buyReview(service) {
     if (!currentSession) { toggleAuth(); return; }
     try {
       const res = await fetch('/.netlify/functions/review-checkout', {
