@@ -56,14 +56,15 @@
   #auth-error { color: #e07070; font-size: 0.85rem; margin-bottom: 12px; display: none; }
 
   main { flex: 1; display: flex; flex-direction: column; max-width: 860px; width: 100%; margin: 0 auto; padding: 40px 20px; }
-  #welcome { text-align: center; padding: 60px 20px; }
-  #welcome h1 { font-family: 'Playfair Display', serif; font-size: 2.8rem; color: var(--gold); margin-bottom: 16px; }
-  #welcome p { color: var(--gray); font-size: 1.05rem; max-width: 540px; margin: 0 auto 32px; line-height: 1.7; }
-  #welcome button { background: var(--gold); color: var(--navy); border: none; padding: 14px 36px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
-  #welcome button:hover { background: var(--gold2); }
 
-  #chat-area { display: none; flex-direction: column; flex: 1; }
-  #messages { flex: 1; overflow-y: auto; padding: 20px 0; display: flex; flex-direction: column; gap: 20px; min-height: 400px; max-height: 60vh; }
+  /* HERO — shown to guests above the chat */
+  #hero { text-align: center; padding: 32px 20px 24px; }
+  #hero h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--gold); margin-bottom: 10px; }
+  #hero p { color: var(--gray); font-size: 0.95rem; max-width: 520px; margin: 0 auto; line-height: 1.7; }
+  #free-badge { display: inline-block; background: rgba(201,168,76,0.12); border: 1px solid var(--border); color: var(--gold2); font-size: 0.8rem; padding: 4px 14px; border-radius: 20px; margin-top: 10px; }
+
+  #chat-area { display: flex; flex-direction: column; flex: 1; }
+  #messages { flex: 1; overflow-y: auto; padding: 20px 0; display: flex; flex-direction: column; gap: 20px; min-height: 300px; max-height: 55vh; }
   .msg { display: flex; gap: 14px; animation: fadeIn 0.3s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   .msg.user { flex-direction: row-reverse; }
@@ -87,6 +88,13 @@
   #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .hint { color: var(--gray); font-size: 0.8rem; text-align: center; margin-top: 10px; }
 
+  /* SIGNUP PROMPT — shown after 3 free questions */
+  #signup-prompt { display: none; background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.05)); border: 1px solid var(--gold); border-radius: 8px; padding: 28px; text-align: center; margin-top: 20px; }
+  #signup-prompt h3 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 1.4rem; margin-bottom: 8px; }
+  #signup-prompt p { color: var(--gray); font-size: 0.9rem; margin-bottom: 20px; }
+  #signup-prompt button { background: var(--gold); color: var(--navy); border: none; padding: 13px 32px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+  #signup-prompt button:hover { background: var(--gold2); }
+
   #no-credits { display: none; text-align: center; padding: 40px; background: var(--navy2); border: 1px solid var(--border); border-radius: 8px; margin-top: 20px; }
   #no-credits h3 { font-family: 'Playfair Display', serif; color: var(--gold); margin-bottom: 10px; }
   #no-credits p { color: var(--gray); margin-bottom: 24px; font-size: 0.9rem; }
@@ -100,7 +108,6 @@
   footer { text-align: center; padding: 20px; border-top: 1px solid var(--border); color: var(--gray); font-size: 0.8rem; }
   footer a { color: var(--gold); cursor: pointer; text-decoration: none; }
 
-  /* UPLOAD AREA */
   #upload-area { display: none; background: var(--navy2); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-top: 20px; text-align: center; }
   #upload-area h3 { font-family: "Playfair Display", serif; color: var(--gold); margin-bottom: 8px; }
   #upload-area p { color: var(--gray); font-size: 0.9rem; margin-bottom: 16px; }
@@ -152,13 +159,13 @@
 <!-- AUTH MODAL -->
 <div id="auth-modal">
   <div class="modal-box">
-    <h2 id="modal-title">Sign In</h2>
-    <p id="modal-sub">Access your regulatory AI consultant</p>
+    <h2 id="modal-title">Create Free Account</h2>
+    <p id="modal-sub">Save your conversation and continue your consultation</p>
     <div id="auth-error"></div>
     <input type="email" id="auth-email" placeholder="Email address" />
     <input type="password" id="auth-password" placeholder="Password" />
     <button class="primary" onclick="submitAuth()">Continue</button>
-    <div class="toggle" id="auth-toggle">No account? <a onclick="switchMode()">Create one</a></div>
+    <div class="toggle" id="auth-toggle">Already have an account? <a onclick="switchMode()">Sign in</a></div>
   </div>
 </div>
 
@@ -166,17 +173,20 @@
   <div class="logo">DRUA <span>REGULATORY AI</span></div>
   <div style="display:flex;gap:16px;align-items:center;">
     <div id="credits-display" style="display:none;">⬡ <span id="credits-count">0</span> credits</div>
-    <a href="/cdn-cgi/l/email-protection#7f09161c0b100d161e3f1b0d0a1e1c10110c0a130b161118511c1012" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 16px;border-radius:4px;font-size:0.85rem;text-decoration:none;white-space:nowrap;">Work With Us</a>
+    <a href="/cdn-cgi/l/email-protection#40362923342f3229210024323521232f2e33352c34292e276e232f2d" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 16px;border-radius:4px;font-size:0.85rem;text-decoration:none;white-space:nowrap;">Work With Us</a>
     <button id="auth-btn" onclick="toggleAuth()">Sign In</button>
   </div>
 </header>
 
 <main>
-  <div id="welcome">
-    <h1>Your Medical Device Regulatory and Quality Consultant</h1>
-    <p>Expert guidance on FDA medical device regulations, 510(k), PMA, ISO 13485, EU MDR, and more — powered by AI trained on regulatory frameworks. First 3 questions free.</p>
-    <button onclick="toggleAuth()">Get Started</button>
+  <!-- Hero shown to guests -->
+  <div id="hero">
+    <h1>From Questions to Submission-Ready Templates — Fast</h1>
+    <p>Regulatory and quality guidance for FDA, EU MDR, and Health Canada. Generate templates instantly, then have experts review them.</p>
+    <span id="free-badge">✦ First 3 questions free — no account required</span>
   </div>
+
+  <!-- Chat always visible -->
   <div id="chat-area">
     <div id="messages"></div>
     <div class="input-row">
@@ -184,6 +194,13 @@
       <button id="send-btn" onclick="sendMessage()">Ask Drua</button>
     </div>
     <div class="hint">Press Enter to send · Shift+Enter for new line</div>
+  </div>
+
+  <!-- Shown after 3 free questions -->
+  <div id="signup-prompt">
+    <h3>You've used your 3 free questions</h3>
+    <p>Create a free account to continue your consultation and purchase additional credits.</p>
+    <button onclick="showSignup()">Create Free Account →</button>
   </div>
 </main>
 
@@ -214,7 +231,7 @@
       <button class="plan-btn" onclick="buyReview('eu_mdr_tech')"><div class="plan-name">EU MDR Technical File Review</div><div class="plan-price">$8,000</div></button>
     </div>
   </div>
-  <div style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(201,168,76,0.2);color:#8892a4;font-size:0.9rem;">Need expert review of your FDA submission? <a href="/cdn-cgi/l/email-protection#9ee8f7fdeaf1ecf7ffdefaecebfffdf1f0edebf2eaf7f0f9b0fdf1f3" style="color:#c9a84c;">Contact <span class="__cf_email__" data-cfemail="82f4ebe1f6edf0ebe3c2e6f0f7e3e1edecf1f7eef6ebece5ace1edef">[email&#160;protected]</span></a></div>
+  <div style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(201,168,76,0.2);color:#8892a4;font-size:0.9rem;">Need expert review of your FDA submission? <a href="/cdn-cgi/l/email-protection#8ef8e7edfae1fce7efceeafcfbefede1e0fdfbe2fae7e0e9a0ede1e3" style="color:#c9a84c;">Contact <span class="__cf_email__" data-cfemail="c1b7a8a2b5aeb3a8a081a5b3b4a0a2aeafb2b4adb5a8afa6efa2aeac">[email&#160;protected]</span></a></div>
 </div>
 
 <div id="upload-area">
@@ -234,89 +251,51 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNybHl3dGR3aWVpa2F3bmtzcWhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNzgxNzIsImV4cCI6MjA4ODY1NDE3Mn0.bJkyvw4qEbLMttedRVoDXpzWg1I3m2AaBtuSHvvmq98';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let authMode = 'signin';
+  const FREE_LIMIT = 3;
+  let authMode = 'signup';
   let currentSession = null;
 
-  function showTerms() {
-    document.getElementById('terms-modal').classList.add('show');
-  }
+  // Track free questions used in localStorage
+  function getFreeCount() { return parseInt(localStorage.getItem('drua_free_used') || '0'); }
+  function incFreeCount() { localStorage.setItem('drua_free_used', getFreeCount() + 1); }
 
+  function showTerms() { document.getElementById('terms-modal').classList.add('show'); }
   function toggleAccept() {
     const checked = document.getElementById('terms-checkbox').checked;
-    const btn = document.getElementById('accept-btn');
-    btn.classList.toggle('active', checked);
+    document.getElementById('accept-btn').classList.toggle('active', checked);
   }
-
   function acceptTerms() {
     localStorage.setItem('drua_terms_accepted', 'true');
     document.getElementById('terms-modal').classList.remove('show');
   }
-
   function checkTerms() {
-    if (!localStorage.getItem('drua_terms_accepted')) {
-      showTerms();
-    }
+    if (!localStorage.getItem('drua_terms_accepted')) showTerms();
   }
 
-  async function init() {
-    checkTerms();
-    const { data } = await sb.auth.getSession();
-    if (data.session) onLogin(data.session);
-    sb.auth.onAuthStateChange((event, session) => {
-      if (session) onLogin(session);
-      else onLogout();
-    });
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-      addMessage('bot', '✅ Payment successful! Your credits have been added.');
-      window.history.replaceState({}, '', '/');
-    }
-  }
-
-  async function onLogin(session) {
-    currentSession = session;
-    document.getElementById('auth-btn').textContent = 'Sign Out';
-    document.getElementById('welcome').style.display = 'none';
-    document.getElementById('chat-area').style.display = 'flex';
-    document.getElementById('auth-modal').classList.remove('show');
-    document.getElementById('credits-display').style.display = 'block';
-    await loadCredits();
-    await checkPendingReview();
-    if (document.getElementById('messages').children.length === 0) {
-      addMessage('bot', `Welcome to Drua. I'm your AI regulatory consultant specializing in FDA medical device regulations. Ask me about 510(k), PMA, ISO 13485, EU MDR, SaMD, or any other regulatory matter.`);
-    }
-  }
-
-  function onLogout() {
-    currentSession = null;
-    document.getElementById('auth-btn').textContent = 'Sign In';
-    document.getElementById('welcome').style.display = 'block';
-    document.getElementById('chat-area').style.display = 'none';
-    document.getElementById('credits-display').style.display = 'none';
-  }
-
-  async function loadCredits() {
-    if (!currentSession) return;
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentSession.user.id}&select=credits`, {
-      headers: { Authorization: `Bearer ${currentSession.access_token}`, apikey: SUPABASE_ANON_KEY }
-    });
-    const data = await res.json();
-    const credits = data[0]?.credits ?? 0;
-    document.getElementById('credits-count').textContent = credits;
-    document.getElementById('no-credits').style.display = credits <= 0 ? 'block' : 'none';
+  function showSignup() {
+    authMode = 'signup';
+    document.getElementById('modal-title').textContent = 'Create Free Account';
+    document.getElementById('modal-sub').textContent = 'Save your conversation and continue your consultation';
+    document.getElementById('auth-toggle').innerHTML = 'Already have an account? <a onclick="switchMode()">Sign in</a>';
+    document.getElementById('auth-modal').classList.add('show');
   }
 
   function toggleAuth() {
     if (currentSession) { sb.auth.signOut(); return; }
+    authMode = 'signin';
+    document.getElementById('modal-title').textContent = 'Sign In';
+    document.getElementById('modal-sub').textContent = 'Access your regulatory AI consultant';
+    document.getElementById('auth-toggle').innerHTML = 'No account? <a onclick="switchMode()">Create one</a>';
     document.getElementById('auth-modal').classList.toggle('show');
   }
 
   function switchMode() {
     authMode = authMode === 'signin' ? 'signup' : 'signin';
-    document.getElementById('modal-title').textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+    document.getElementById('modal-title').textContent = authMode === 'signin' ? 'Sign In' : 'Create Free Account';
+    document.getElementById('modal-sub').textContent = authMode === 'signin' ? 'Access your regulatory AI consultant' : 'Save your conversation and continue';
     document.getElementById('auth-toggle').innerHTML = authMode === 'signin'
       ? 'No account? <a onclick="switchMode()">Create one</a>'
-      : 'Have an account? <a onclick="switchMode()">Sign in</a>';
+      : 'Already have an account? <a onclick="switchMode()">Sign in</a>';
   }
 
   async function submitAuth() {
@@ -333,6 +312,56 @@
       errEl.textContent = 'Check your email to confirm your account!';
       errEl.style.display = 'block';
     }
+  }
+
+  async function init() {
+    checkTerms();
+    const { data } = await sb.auth.getSession();
+    if (data.session) onLogin(data.session);
+    sb.auth.onAuthStateChange((event, session) => {
+      if (session) onLogin(session);
+      else onLogout();
+    });
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      addMessage('bot', '✅ Payment successful! Your credits have been added.');
+      window.history.replaceState({}, '', '/');
+    }
+    // Show welcome message to guests
+    if (!currentSession && document.getElementById('messages').children.length === 0) {
+      addMessage('bot', "Welcome to Drua! I'm your AI regulatory consultant specializing in FDA medical device regulations. Ask me anything about 510(k), PMA, De Novo, ISO 13485, EU MDR, or SaMD. Your first 3 questions are free — no account needed.");
+    }
+  }
+
+  async function onLogin(session) {
+    currentSession = session;
+    document.getElementById('auth-btn').textContent = 'Sign Out';
+    document.getElementById('auth-modal').classList.remove('show');
+    document.getElementById('credits-display').style.display = 'block';
+    document.getElementById('hero').style.display = 'none';
+    document.getElementById('signup-prompt').style.display = 'none';
+    document.getElementById('question-input').disabled = false;
+    document.getElementById('send-btn').disabled = false;
+    await loadCredits();
+    await checkPendingReview();
+  }
+
+  function onLogout() {
+    currentSession = null;
+    document.getElementById('auth-btn').textContent = 'Sign In';
+    document.getElementById('credits-display').style.display = 'none';
+    document.getElementById('hero').style.display = 'block';
+  }
+
+  async function loadCredits() {
+    if (!currentSession) return;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentSession.user.id}&select=credits`, {
+      headers: { Authorization: `Bearer ${currentSession.access_token}`, apikey: SUPABASE_ANON_KEY }
+    });
+    const data = await res.json();
+    const credits = data[0]?.credits ?? 0;
+    document.getElementById('credits-count').textContent = credits;
+    document.getElementById('no-credits').style.display = credits <= 0 ? 'block' : 'none';
   }
 
   document.addEventListener('keydown', e => {
@@ -369,30 +398,70 @@
   }
 
   async function sendMessage() {
-    if (!currentSession) { toggleAuth(); return; }
     const input = document.getElementById('question-input');
     const question = input.value.trim();
     if (!question) return;
+
+    // Guest flow: check free question limit
+    if (!currentSession) {
+      const used = getFreeCount();
+      if (used >= FREE_LIMIT) {
+        document.getElementById('signup-prompt').style.display = 'block';
+        document.getElementById('question-input').disabled = true;
+        document.getElementById('send-btn').disabled = true;
+        return;
+      }
+    }
+
     input.value = '';
     document.getElementById('send-btn').disabled = true;
     addMessage('user', question);
     addTyping();
+
     try {
-      const res = await fetch('/.netlify/functions/chat', {
+      const fetchOptions = {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question })
-      });
+      };
+      // Add auth header if logged in
+      if (currentSession) {
+        fetchOptions.headers['Authorization'] = `Bearer ${currentSession.access_token}`;
+      }
+
+      const res = await fetch('/.netlify/functions/chat', fetchOptions);
       const data = await res.json();
       removeTyping();
+
       if (data.error === 'no_credits') {
         document.getElementById('no-credits').style.display = 'block';
         addMessage('bot', 'You have no credits remaining. Please purchase credits to continue.');
       } else if (data.answer) {
         addMessage('bot', data.answer);
         showTemplateButton();
-        document.getElementById('credits-count').textContent = data.credits_remaining;
-        if (data.credits_remaining <= 0) document.getElementById('no-credits').style.display = 'block';
+
+        if (data.guest) {
+          // Guest answer received — increment counter
+          incFreeCount();
+          const remaining = FREE_LIMIT - getFreeCount();
+          if (remaining <= 0) {
+            // Out of free questions — show signup prompt after this answer
+            setTimeout(() => {
+              addMessage('bot', '✦ You\'ve used all 3 free questions. Create a free account to continue your consultation!');
+              document.getElementById('signup-prompt').style.display = 'block';
+              document.getElementById('question-input').disabled = true;
+              document.getElementById('send-btn').disabled = true;
+            }, 500);
+          } else {
+            // Show remaining count
+            const badge = document.getElementById('free-badge');
+            if (badge) badge.textContent = `✦ ${remaining} free question${remaining === 1 ? '' : 's'} remaining`;
+          }
+        } else {
+          // Authenticated user
+          document.getElementById('credits-count').textContent = data.credits_remaining;
+          if (data.credits_remaining <= 0) document.getElementById('no-credits').style.display = 'block';
+        }
       } else {
         addMessage('bot', `Sorry, something went wrong: ${data.error || 'Unknown error'}`);
       }
@@ -403,83 +472,59 @@
     document.getElementById('send-btn').disabled = false;
   }
 
-  // ── SMART TEMPLATE DETECTION ──────────────────────────────────────────────
-  // Reads the full conversation and returns only the templates that are relevant.
-  // Falls back to showing all four if no specific topic is detected.
+  // Smart template detection
   function detectRelevantTemplates() {
     const allText = [...document.querySelectorAll('.msg .bubble')]
-      .map(b => b.innerText.toLowerCase())
-      .join(' ');
-
+      .map(b => b.innerText.toLowerCase()).join(' ');
     const templates = [];
-
-    if (/\b510\s*k\b|premarket notification|substantial equivalence|predicate device/.test(allText)) {
+    if (/\b510\s*k\b|premarket notification|substantial equivalence|predicate device/.test(allText))
       templates.push({ type: '510k', label: '⬇ 510(k) Submission' });
-    }
-    if (/pre.?sub(mission)?|q.?sub|presubmission/.test(allText)) {
+    if (/pre.?sub(mission)?|q.?sub|presubmission/.test(allText))
       templates.push({ type: 'presub', label: '⬇ Pre-Submission (Q-Sub)' });
-    }
-    if (/\b513\s*g\b|request for information|classification information/.test(allText)) {
+    if (/\b513\s*g\b|request for information|classification information/.test(allText))
       templates.push({ type: '513g', label: '⬇ FDA 513(g) Request' });
-    }
-    if (/de.?novo|novel device|class ii novel|classification request/.test(allText)) {
+    if (/de.?novo|novel device|class ii novel|classification request/.test(allText))
       templates.push({ type: 'denovo', label: '⬇ De Novo Request' });
-    }
-
-    // Nothing specific detected — show all four as a general prompt
-    if (templates.length === 0) {
-      return [
-        { type: '510k',   label: '⬇ 510(k) Submission' },
-        { type: 'presub', label: '⬇ Pre-Submission (Q-Sub)' },
-        { type: '513g',   label: '⬇ FDA 513(g) Request' },
-        { type: 'denovo', label: '⬇ De Novo Request' }
-      ];
-    }
-
+    if (templates.length === 0) return [
+      { type: '510k', label: '⬇ 510(k) Submission' },
+      { type: 'presub', label: '⬇ Pre-Submission (Q-Sub)' },
+      { type: '513g', label: '⬇ FDA 513(g) Request' },
+      { type: 'denovo', label: '⬇ De Novo Request' }
+    ];
     return templates;
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
   function showTemplateButton() {
-    // Always remove and rebuild so buttons stay accurate after every new reply
     const existing = document.getElementById('template-btn-area');
     if (existing) existing.remove();
-
     const relevant = detectRelevantTemplates();
     const msgs = document.getElementById('messages');
     const div = document.createElement('div');
     div.id = 'template-btn-area';
     div.style.cssText = 'text-align:center;padding:16px;';
-
     const btnStyle = `background:var(--gold);color:var(--navy);border:none;padding:12px 16px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;font-size:0.85rem;`;
     const cols = relevant.length === 1 ? '1fr' : '1fr 1fr';
     const buttons = relevant.map(t =>
       `<button onclick="generateTemplate('${t.type}')" style="${btnStyle}">${t.label}</button>`
     ).join('');
-
     div.innerHTML = `
       <p style="color:var(--gray);font-size:0.85rem;margin-bottom:12px;">Ready to generate a template based on your consultation?</p>
-      <div style="display:grid;grid-template-columns:${cols};gap:10px;max-width:500px;margin:0 auto;">
-        ${buttons}
-      </div>
+      <div style="display:grid;grid-template-columns:${cols};gap:10px;max-width:500px;margin:0 auto;">${buttons}</div>
     `;
-
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
   }
 
   async function generateTemplate(type) {
-    if (!currentSession) { toggleAuth(); return; }
+    if (!currentSession) { showSignup(); return; }
     const btns = document.querySelectorAll('#template-btn-area button');
     btns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
     const clickedBtn = event.target;
     clickedBtn.textContent = 'Generating...';
-
     const msgs = [...document.querySelectorAll('.msg')].map(m => ({
       role: m.classList.contains('user') ? 'user' : 'bot',
       text: m.querySelector('.bubble')?.innerText || ''
     }));
-
     try {
       const res = await fetch('/.netlify/functions/generate-template', {
         method: 'POST',
@@ -507,7 +552,7 @@
   }
 
   async function buyCredits(plan) {
-    if (!currentSession) { toggleAuth(); return; }
+    if (!currentSession) { showSignup(); return; }
     try {
       const res = await fetch('/.netlify/functions/create-checkout', {
         method: 'POST',
@@ -516,13 +561,11 @@
       });
       const data = await res.json();
       if (data.checkout_url) window.top.location.href = data.checkout_url;
-    } catch (err) {
-      alert('Error initiating checkout. Please try again.');
-    }
+    } catch (err) { alert('Error initiating checkout. Please try again.'); }
   }
 
   async function buyReview(service) {
-    if (!currentSession) { toggleAuth(); return; }
+    if (!currentSession) { showSignup(); return; }
     try {
       const res = await fetch('/.netlify/functions/review-checkout', {
         method: 'POST',
@@ -531,17 +574,13 @@
       });
       const data = await res.json();
       if (data.checkout_url) window.top.location.href = data.checkout_url;
-    } catch (err) {
-      alert('Error initiating checkout. Please try again.');
-    }
+    } catch (err) { alert('Error initiating checkout. Please try again.'); }
   }
 
   async function checkPendingReview() {
     if (!currentSession) return;
     const { data } = await sb.from('reviews').select('*').eq('user_id', currentSession.user.id).eq('status', 'paid').is('file_url', null).limit(1);
-    if (data && data.length > 0) {
-      document.getElementById('upload-area').style.display = 'block';
-    }
+    if (data && data.length > 0) document.getElementById('upload-area').style.display = 'block';
   }
 
   async function handleFileUpload(event) {
