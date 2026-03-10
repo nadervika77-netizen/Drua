@@ -1,0 +1,10 @@
+{
+  "name": "drua-chatbot",
+  "version": "1.0.0",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.0",
+    "@supabase/supabase-js": "^2.0.0",
+    "stripe": "^14.0.0",
+    "docx": "^8.5.0"
+  }
+}
