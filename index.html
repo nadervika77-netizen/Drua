@@ -416,8 +416,9 @@ if (templateType) showTemplateButton(templateType);
   }
   function detectTemplateType(text) {
   const t = text.toLowerCase();
-  if (t.includes('510(k)') || t.includes('510k')) return '510k';
+  
   if (t.includes('pre-submission') || t.includes('q-sub') || t.includes('presub')) return 'presub';
+  if (t.includes('510(k)') || t.includes('510k')) return '510k';
   if (t.includes('513(g)') || t.includes('513g')) return '513g';
   return null;
 }
