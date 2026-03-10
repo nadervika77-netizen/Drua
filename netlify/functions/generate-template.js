@@ -1,0 +1,209 @@
+const Anthropic = require('@anthropic-ai/sdk');
+const { createClient } = require('@supabase/supabase-js');
+const {
+  Document, Packer, Paragraph, TextRun, HeadingLevel,
+  AlignmentType, BorderStyle, Table, TableRow, TableCell,
+  WidthType, ShadingType
+} = require('docx');
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+const TEMPLATES = {
+  '510k': {
+    name: 'FDA 510(k) Premarket Notification',
+    sections: [
+      { title: '1. Cover Sheet', key: 'cover', placeholder: 'Device name, applicant info, submission date' },
+      { title: '2. Indications for Use', key: 'indications', placeholder: 'Describe intended use and indications' },
+      { title: '3. Device Description', key: 'device_description', placeholder: 'Detailed device description and technology' },
+      { title: '4. Substantial Equivalence Discussion', key: 'substantial_equivalence', placeholder: 'Predicate device comparison and equivalence argument' },
+      { title: '5. Performance Testing Summary', key: 'performance_testing', placeholder: 'Bench, animal, and/or clinical testing results' },
+      { title: '6. Biocompatibility', key: 'biocompatibility', placeholder: 'ISO 10993 biocompatibility evaluation' },
+      { title: '7. Software Documentation', key: 'software', placeholder: 'Software level of concern and documentation (if applicable)' },
+      { title: '8. Sterilization and Shelf Life', key: 'sterilization', placeholder: 'Sterilization method and validation (if applicable)' },
+      { title: '9. Proposed Labeling', key: 'labeling', placeholder: 'Draft labeling including intended use, contraindications, warnings' },
+      { title: '10. Conclusion', key: 'conclusion', placeholder: 'Summary of substantial equivalence determination' }
+    ]
+  },
+  'presub': {
+    name: 'FDA Pre-Submission (Q-Sub) Meeting Request',
+    sections: [
+      { title: '1. Cover Sheet', key: 'cover', placeholder: 'Applicant info, device name, submission type' },
+      { title: '2. Product Description', key: 'product', placeholder: 'Brief description of device and its intended use' },
+      { title: '3. Regulatory Background', key: 'background', placeholder: 'Current regulatory status and history' },
+      { title: '4. Type of Submission Planned', key: 'submission_type', placeholder: '510(k), PMA, De Novo, etc.' },
+      { title: '5. Proposed Questions for FDA', key: 'questions', placeholder: 'Specific questions to be discussed with FDA' },
+      { title: '6. Supporting Data Summary', key: 'supporting_data', placeholder: 'Preliminary data supporting the questions' },
+      { title: '7. Requested Meeting Format', key: 'meeting_format', placeholder: 'In-person, teleconference, or written response only' }
+    ]
+  },
+  '513g': {
+    name: 'FDA 513(g) Request for Device Classification Information',
+    sections: [
+      { title: '1. Cover Sheet', key: 'cover', placeholder: 'Applicant info, device name, contact information' },
+      { title: '2. Device Description', key: 'device_description', placeholder: 'Detailed description of device components and materials' },
+      { title: '3. Intended Use and Indications', key: 'intended_use', placeholder: 'How and why the device will be used' },
+      { title: '4. Device Classification Question', key: 'classification', placeholder: 'Specific classification questions for FDA' },
+      { title: '5. Regulatory History', key: 'reg_history', placeholder: 'Any prior FDA submissions or interactions' },
+      { title: '6. Comparable Devices', key: 'comparable', placeholder: 'Similar legally marketed devices, if known' },
+      { title: '7. Supporting Information', key: 'supporting', placeholder: 'Technical data, references, literature' }
+    ]
+  }
+};
+
+exports.handler = async (event) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Content-Type': 'application/json'
+  };
+
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) };
+
+  try {
+    // Authenticate user
+    const token = (event.headers.authorization || '').replace('Bearer ', '');
+    const { data: { user }, error: authError } = await sb.auth.getUser(token);
+    if (authError || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
+
+    const { templateType, conversation } = JSON.parse(event.body);
+    const template = TEMPLATES[templateType];
+    if (!template) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown template type' }) };
+
+    // Build conversation context
+    const conversationText = conversation
+      .map(m => `${m.role === 'user' ? 'User' : 'Drua AI'}: ${m.text}`)
+      .join('\n\n');
+
+    // Use Claude to extract and fill template sections
+    const prompt = `You are a regulatory affairs expert. Based on the following conversation between a user and Drua (a medical device regulatory AI), fill in each section of a ${template.name} template.
+
+CONVERSATION:
+${conversationText}
+
+Fill in each section below using information from the conversation. Where information was not discussed, write "[TO BE COMPLETED BY APPLICANT: brief description of what's needed]". Be professional, thorough, and use proper FDA regulatory language.
+
+Return ONLY a valid JSON object with these exact keys:
+${template.sections.map(s => `"${s.key}": "content for ${s.title}"`).join(',\n')}
+
+JSON only, no markdown, no explanation.`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    let sections;
+    try {
+      const raw = response.content[0].text.replace(/```json|```/g, '').trim();
+      sections = JSON.parse(raw);
+    } catch {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to parse template content' }) };
+    }
+
+    // Build .docx document
+    const children = [];
+
+    // Title
+    children.push(
+      new Paragraph({
+        text: template.name,
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'CONFIDENTIAL DRAFT — FOR REVIEW PURPOSES ONLY', bold: true, color: 'C0392B', size: 20 })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: `Generated by Drua Regulatory AI | ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, color: '666666', size: 18, italics: true })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 600 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: 'This document was auto-generated based on your consultation with Drua AI. All sections marked [TO BE COMPLETED] require your input. This draft must be reviewed and validated by a qualified regulatory professional before submission to FDA.', color: '888888', size: 18, italics: true })],
+        spacing: { after: 800 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' } }
+      })
+    );
+
+    // Sections
+    for (const section of template.sections) {
+      const content = sections[section.key] || '[TO BE COMPLETED BY APPLICANT]';
+
+      children.push(
+        new Paragraph({
+          text: section.title,
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 400, after: 200 }
+        })
+      );
+
+      // Split content into paragraphs
+      const paragraphs = content.split('\n').filter(p => p.trim());
+      for (const para of paragraphs) {
+        const isPlaceholder = para.includes('[TO BE COMPLETED');
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: para,
+                color: isPlaceholder ? 'E74C3C' : '2C3E50',
+                italics: isPlaceholder,
+                size: 22
+              })
+            ],
+            spacing: { after: 160 }
+          })
+        );
+      }
+    }
+
+    // Footer note
+    children.push(
+      new Paragraph({ text: '', spacing: { before: 600 } }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'Next Steps: ', bold: true, size: 20 }),
+          new TextRun({ text: 'Complete all sections marked [TO BE COMPLETED BY APPLICANT], then contact Victoria at victoria@druaconsulting.com for expert review before FDA submission.', size: 20 })
+        ],
+        border: { top: { style: BorderStyle.SINGLE, size: 1, color: 'C9A84C' } },
+        spacing: { before: 200 }
+      })
+    );
+
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+          }
+        },
+        children
+      }]
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        docx_base64: buffer.toString('base64'),
+        filename: `Drua_${templateType.toUpperCase()}_Template_${Date.now()}.docx`
+      })
+    };
+
+  } catch (err) {
+    console.error('generate-template error:', err);
+    return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+  }
+};
