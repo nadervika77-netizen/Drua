@@ -88,7 +88,24 @@ const TEMPLATES = {
       { title: '6. Comparable Devices', key: 'comparable', placeholder: 'Similar legally marketed devices, if known' },
       { title: '7. Supporting Information', key: 'supporting', placeholder: 'Technical data, references, literature' }
     ]
+  },
+  'denovo': {
+    name: 'FDA De Novo Classification Request',
+    sections: [
+      { title: '1. Cover Sheet', key: 'cover', placeholder: 'Applicant info, device name, submission date' },
+      { title: '2. Executive Summary', key: 'executive_summary', placeholder: 'Brief overview of the device and De Novo request' },
+      { title: '3. Device Description', key: 'device_description', placeholder: 'Detailed description of device, components, materials, and technology' },
+      { title: '4. Intended Use and Indications for Use', key: 'intended_use', placeholder: 'Intended use, target population, conditions of use' },
+      { title: '5. Proposed Classification and Special Controls', key: 'classification', placeholder: 'Proposed device type, product code, and special controls' },
+      { title: '6. Why 510(k) is Not Appropriate', key: 'equivalence', placeholder: 'Explanation of why no predicate exists' },
+      { title: '7. Risk Analysis', key: 'risk_analysis', placeholder: 'Risks to health and proposed mitigations' },
+      { title: '8. Performance Testing', key: 'performance_testing', placeholder: 'Bench, biocompatibility, clinical testing summary' },
+      { title: '9. Proposed Special Controls', key: 'special_controls', placeholder: 'Controls that provide reasonable assurance of safety and effectiveness' },
+      { title: '10. Labeling', key: 'labeling', placeholder: 'Draft labeling, IFU, warnings' },
+      { title: '11. Conclusion', key: 'conclusion', placeholder: 'Summary supporting De Novo classification' }
+    ]
   }
+}
 };
 
 exports.handler = async (event) => {
