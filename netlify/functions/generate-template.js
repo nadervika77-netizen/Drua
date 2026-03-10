@@ -9,6 +9,47 @@ const {
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+async function sendEmailNotification(userEmail, templateName, conversationSummary) {
+  const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+  const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'victoria@druaconsulting.com';
+  if (!SENDGRID_API_KEY) return;
+
+  const emailBody = {
+    personalizations: [{ to: [{ email: FROM_EMAIL }] }],
+    from: { email: FROM_EMAIL, name: 'Drua AI System' },
+    subject: `🔔 New Template Generated: ${templateName}`,
+    content: [{
+      type: 'text/html',
+      value: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9;">
+          <div style="background: #0a1628; padding: 24px; border-radius: 8px 8px 0 0;">
+            <h1 style="color: #c9a84c; margin: 0; font-size: 1.4rem;">DRUA — New Template Generated</h1>
+          </div>
+          <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #eee;">
+            <p><strong>Template Type:</strong> ${templateName}</p>
+            <p><strong>User Email:</strong> ${userEmail}</p>
+            <p><strong>Generated At:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} PT</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+            <h3 style="color: #0a1628;">Consultation Summary:</h3>
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 4px; font-size: 0.9rem; white-space: pre-wrap;">${conversationSummary}</div>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+            <p style="color: #666; font-size: 0.85rem;">This user may need your expert review. Reply to this email or contact them at <a href="mailto:${userEmail}">${userEmail}</a>.</p>
+          </div>
+        </div>
+      `
+    }]
+  };
+
+  await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(emailBody)
+  });
+}
+
 const TEMPLATES = {
   '510k': {
     name: 'FDA 510(k) Premarket Notification',
@@ -192,6 +233,13 @@ JSON only, no markdown, no explanation.`;
     });
 
     const buffer = await Packer.toBuffer(doc);
+
+    // Send email notification to Victoria
+    const conversationSummary = conversation
+      .slice(-10)
+      .map(m => `${m.role === 'user' ? '👤 User' : '🤖 Drua'}: ${m.text.substring(0, 200)}${m.text.length > 200 ? '...' : ''}`)
+      .join('\n\n');
+    await sendEmailNotification(user.email, template.name, conversationSummary).catch(e => console.error('Email error:', e));
 
     return {
       statusCode: 200,
