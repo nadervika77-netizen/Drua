@@ -89,7 +89,8 @@
   .svc-card:hover::before { height: 100%; }
   .svc-card.hidden { display: none; }
   .svc-tag { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); opacity: 0.75; margin-bottom: 10px; }
-  .svc-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--white); line-height: 1.35; margin-bottom: 12px; flex-grow: 1; }
+  .svc-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--white); line-height: 1.35; margin-bottom: 8px; }
+  .svc-desc { font-size: 0.82rem; color: var(--gray); line-height: 1.6; margin-bottom: 12px; flex-grow: 1; }
   .svc-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 20px; border-top: 1px solid rgba(201,168,76,0.1); margin-top: auto; gap: 12px; }
   .svc-price { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--gold); white-space: nowrap; }
   .svc-price small { display: block; font-family: 'DM Sans', sans-serif; font-size: 0.68rem; color: var(--gray); margin-top: 2px; }
@@ -186,6 +187,7 @@
     <div class="svc-card" data-cat="fda">
       <div class="svc-tag">FDA</div>
       <div class="svc-name">FDA 513(g) Request for Information Review</div>
+      <div class="svc-desc">Expert review of your 513(g) response before submission — ensuring your device classification rationale is accurate and complete.</div>
       <div class="svc-footer">
         <div class="svc-price">$1,000 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('fda_513g')">Purchase</button>
@@ -195,6 +197,7 @@
     <div class="svc-card" data-cat="fda">
       <div class="svc-tag">FDA</div>
       <div class="svc-name">FDA Pre-Submission (Q-Sub) Meeting Package Review</div>
+      <div class="svc-desc">Strengthen your Q-Sub package before FDA engagement — including question framing, supporting data review, and strategy alignment.</div>
       <div class="svc-footer">
         <div class="svc-price">$1,000 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('fda_presub')">Purchase</button>
@@ -204,6 +207,7 @@
     <div class="svc-card" data-cat="quality">
       <div class="svc-tag">Quality & QMS</div>
       <div class="svc-name">Corrective and Preventive Action (CAPA) System Review</div>
+      <div class="svc-desc">Identify gaps in your CAPA process before an FDA inspection finds them — with actionable remediation recommendations.</div>
       <div class="svc-footer">
         <div class="svc-price">$1,500 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('capa_review')">Purchase</button>
@@ -213,6 +217,7 @@
     <div class="svc-card" data-cat="quality">
       <div class="svc-tag">Quality & QMS</div>
       <div class="svc-name">Device History Record (DHR) Review</div>
+      <div class="svc-desc">Verify your DHR is complete, accurate, and inspection-ready — covering lot records, manufacturing steps, and release criteria.</div>
       <div class="svc-footer">
         <div class="svc-price">$1,500 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('dhr_review')">Purchase</button>
@@ -222,6 +227,7 @@
     <div class="svc-card" data-cat="quality">
       <div class="svc-tag">Quality & QMS</div>
       <div class="svc-name">ISO 13485 QMS Implementation Review</div>
+      <div class="svc-desc">Evaluate your QMS implementation against ISO 13485 requirements — with detailed findings and prioritized corrective actions.</div>
       <div class="svc-footer">
         <div class="svc-price">$1,500 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('iso_qms')">Purchase</button>
@@ -231,6 +237,7 @@
     <div class="svc-card" data-cat="quality">
       <div class="svc-tag">Quality & QMS</div>
       <div class="svc-name">FDA QSR / ISO 13485 Gap Assessment</div>
+      <div class="svc-desc">Side-by-side assessment of your quality system against both FDA QMSR and ISO 13485 — identifying compliance gaps and remediation priorities.</div>
       <div class="svc-footer">
         <div class="svc-price">$3,500 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('fda_qsr_gap')">Purchase</button>
@@ -240,6 +247,7 @@
     <div class="svc-card" data-cat="fda">
       <div class="svc-tag">FDA</div>
       <div class="svc-name">FDA Premarket Notification 510(k) Review</div>
+      <div class="svc-desc">Comprehensive review of your 510(k) submission — predicate selection, substantial equivalence argument, performance testing, and labeling.</div>
       <div class="svc-footer">
         <div class="svc-price">$5,000 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('fda_510k')">Purchase</button>
@@ -249,6 +257,7 @@
     <div class="svc-card" data-cat="eu">
       <div class="svc-tag">EU MDR</div>
       <div class="svc-name">EU MDR Technical File Review</div>
+      <div class="svc-desc">In-depth review of your EU MDR Technical File — clinical evaluation, risk management, GSPR checklist, and notified body readiness.</div>
       <div class="svc-footer">
         <div class="svc-price">$8,000 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('eu_mdr_tech')">Purchase</button>
@@ -258,6 +267,7 @@
     <div class="svc-card" data-cat="fda">
       <div class="svc-tag">FDA</div>
       <div class="svc-name">Design History File (DHF) Review</div>
+      <div class="svc-desc">Review your DHF for completeness and traceability — design inputs, outputs, verification, validation, and design transfer documentation.</div>
       <div class="svc-footer">
         <div class="svc-price">$8,000 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('dhf_review')">Purchase</button>
@@ -267,6 +277,7 @@
     <div class="svc-card" data-cat="fda">
       <div class="svc-tag">FDA</div>
       <div class="svc-name">FDA De Novo Classification Request Review</div>
+      <div class="svc-desc">Review your De Novo request for novel device classification — including special controls rationale, risk assessment, and benefit-risk summary.</div>
       <div class="svc-footer">
         <div class="svc-price">$8,000 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('fda_denovo')">Purchase</button>
@@ -276,6 +287,7 @@
     <div class="svc-card" data-cat="quality">
       <div class="svc-tag">Quality & QMS</div>
       <div class="svc-name">Conduct Internal Quality Audit</div>
+      <div class="svc-desc">On-site or remote audit of your quality system by a former FDA investigator — findings report, observation log, and corrective action plan included.</div>
       <div class="svc-footer">
         <div class="svc-price">$10,000 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('quality_audit')">Purchase</button>
@@ -285,6 +297,7 @@
     <div class="svc-card" data-cat="fda">
       <div class="svc-tag">FDA</div>
       <div class="svc-name">FDA Premarket Approval (PMA) Application Review</div>
+      <div class="svc-desc">Full review of your Class III PMA application — clinical data, manufacturing section, risk analysis, labeling, and submission strategy from a former FDA insider.</div>
       <div class="svc-footer">
         <div class="svc-price">$50,000 <small>per engagement</small></div>
         <button class="svc-buy" onclick="buyReview('fda_pma')">Purchase</button>
