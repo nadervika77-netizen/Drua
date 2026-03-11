@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --navy: #0a1628;
+    --navy2: #112240;
+    --gold: #c9a84c;
+    --gold2: #e8c96d;
+    --white: #f0ece4;
+    --gray: #8892a4;
+    --border: rgba(201,168,76,0.2);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 20px 40px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--navy2); }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--gold); letter-spacing: 2px; }
+  .logo span { color: var(--white); font-size: 0.85rem; display: block; letter-spacing: 3px; font-family: 'DM Sans', sans-serif; font-weight: 300; opacity: 0.7; }
+  #credits-display { background: rgba(201,168,76,0.1); border: 1px solid var(--border); padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; color: var(--gold2); }
+  #auth-btn { background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 8px 20px; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; transition: all 0.2s; }
+  #auth-btn:hover { background: var(--gold); color: var(--navy); }
+
+  /* TERMS MODAL */
+  #terms-modal { display: none; position: fixed; inset: 0; background: rgba(10,22,40,0.97); z-index: 200; justify-content: center; align-items: center; }
+  #terms-modal.show { display: flex; }
+  .terms-box { background: var(--navy2); border: 1px solid var(--border); padding: 48px; width: 620px; max-width: 95vw; border-radius: 8px; max-height: 90vh; display: flex; flex-direction: column; }
+  .terms-box h2 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 1.8rem; margin-bottom: 6px; }
+  .terms-box .subtitle { color: var(--gray); font-size: 0.85rem; margin-bottom: 24px; }
+  .terms-content { overflow-y: auto; flex: 1; padding-right: 8px; margin-bottom: 24px; font-size: 0.88rem; line-height: 1.8; color: #b0bec5; }
+  .terms-content h3 { color: var(--gold); font-size: 0.95rem; margin: 20px 0 8px; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+  .terms-content p { margin-bottom: 12px; }
+  .terms-footer { display: flex; align-items: center; gap: 16px; border-top: 1px solid var(--border); padding-top: 20px; }
+  .terms-footer label { display: flex; align-items: center; gap: 10px; color: var(--white); font-size: 0.9rem; cursor: pointer; flex: 1; }
+  .terms-footer input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold); cursor: pointer; flex-shrink: 0; }
+  #accept-btn { background: var(--gold); color: var(--navy); border: none; padding: 12px 28px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.95rem; cursor: pointer; transition: background 0.2s; opacity: 0.4; pointer-events: none; white-space: nowrap; }
+  #accept-btn.active { opacity: 1; pointer-events: all; }
+  #accept-btn.active:hover { background: var(--gold2); }
+
+  /* AUTH MODAL */
+  #auth-modal { display: none; position: fixed; inset: 0; background: rgba(10,22,40,0.95); z-index: 100; justify-content: center; align-items: center; }
+  #auth-modal.show { display: flex; }
+  .modal-box { background: var(--navy2); border: 1px solid var(--border); padding: 48px; width: 400px; border-radius: 8px; }
+  .modal-box h2 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 1.8rem; margin-bottom: 8px; }
+  .modal-box p { color: var(--gray); font-size: 0.9rem; margin-bottom: 32px; }
+  .modal-box input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--white); padding: 12px 16px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; margin-bottom: 16px; outline: none; transition: border 0.2s; }
+  .modal-box input:focus { border-color: var(--gold); }
+  .modal-box button.primary { width: 100%; background: var(--gold); color: var(--navy); border: none; padding: 13px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1rem; cursor: pointer; margin-bottom: 12px; transition: background 0.2s; }
+  .modal-box button.primary:hover { background: var(--gold2); }
+  .modal-box .toggle { color: var(--gray); font-size: 0.85rem; text-align: center; }
+  .modal-box .toggle a { color: var(--gold); cursor: pointer; text-decoration: none; }
+  #auth-error { color: #e07070; font-size: 0.85rem; margin-bottom: 12px; display: none; }
+
+  main { flex: 1; display: flex; flex-direction: column; max-width: 860px; width: 100%; margin: 0 auto; padding: 40px 20px; }
+
+  /* HERO */
+  #hero { text-align: center; padding: 32px 20px 24px; }
+  #hero h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--gold); margin-bottom: 10px; }
+  #hero p { color: var(--gray); font-size: 0.95rem; max-width: 520px; margin: 0 auto; line-height: 1.7; }
+  #free-badge { display: inline-block; background: rgba(201,168,76,0.12); border: 1px solid var(--border); color: var(--gold2); font-size: 0.8rem; padding: 4px 14px; border-radius: 20px; margin-top: 10px; }
+
+  #chat-area { display: flex; flex-direction: column; flex: 1; }
+  #messages { flex: 1; overflow-y: auto; padding: 20px 0; display: flex; flex-direction: column; gap: 20px; min-height: 300px; max-height: 55vh; }
+  .msg { display: flex; gap: 14px; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 500; flex-shrink: 0; }
+  .msg.bot .avatar { background: rgba(201,168,76,0.15); border: 1px solid var(--border); color: var(--gold); }
+  .msg.user .avatar { background: rgba(255,255,255,0.08); color: var(--white); }
+  .bubble { max-width: 78%; padding: 14px 18px; border-radius: 8px; font-size: 0.95rem; line-height: 1.7; }
+  .msg.bot .bubble { background: var(--navy2); border: 1px solid var(--border); }
+  .msg.user .bubble { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.2); }
+  .typing { display: flex; gap: 5px; align-items: center; padding: 14px 18px; }
+  .typing span { width: 7px; height: 7px; background: var(--gold); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-8px); } }
+
+  .input-row { display: flex; gap: 12px; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
+  #question-input { flex: 1; background: var(--navy2); border: 1px solid var(--border); color: var(--white); padding: 14px 18px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; outline: none; resize: none; transition: border 0.2s; }
+  #question-input:focus { border-color: var(--gold); }
+  #send-btn { background: var(--gold); color: var(--navy); border: none; padding: 14px 24px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+  #send-btn:hover { background: var(--gold2); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .hint { color: var(--gray); font-size: 0.8rem; text-align: center; margin-top: 10px; }
+
+  /* SIGNUP PROMPT */
+  #signup-prompt { display: none; background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.05)); border: 1px solid var(--gold); border-radius: 8px; padding: 28px; text-align: center; margin-top: 20px; }
+  #signup-prompt h3 { font-family: 'Playfair Display', serif; color: var(--gold); font-size: 1.4rem; margin-bottom: 8px; }
+  #signup-prompt p { color: var(--gray); font-size: 0.9rem; margin-bottom: 20px; }
+  #signup-prompt button { background: var(--gold); color: var(--navy); border: none; padding: 13px 32px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+  #signup-prompt button:hover { background: var(--gold2); }
+
+  #no-credits { display: none; text-align: center; padding: 40px; background: var(--navy2); border: 1px solid var(--border); border-radius: 8px; margin-top: 20px; }
+  #no-credits h3 { font-family: 'Playfair Display', serif; color: var(--gold); margin-bottom: 10px; }
+  #no-credits p { color: var(--gray); margin-bottom: 24px; font-size: 0.9rem; }
+  .plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .plan-btn { background: rgba(201,168,76,0.08); border: 1px solid var(--border); color: var(--white); padding: 16px; border-radius: 6px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; text-align: left; }
+  .plan-btn:hover { border-color: var(--gold); background: rgba(201,168,76,0.15); }
+  .plan-btn .plan-name { color: var(--gold); font-weight: 500; margin-bottom: 4px; }
+  .plan-btn .plan-price { font-size: 1.1rem; font-weight: 500; }
+  .plan-btn .plan-q { color: var(--gray); font-size: 0.8rem; }
+
+  footer { text-align: center; padding: 20px; border-top: 1px solid var(--border); color: var(--gray); font-size: 0.8rem; }
+  footer a { color: var(--gold); cursor: pointer; text-decoration: none; }
+
+  #upload-area { display: none; background: var(--navy2); border: 1px solid var(--border); border-radius: 8px; padding: 24px; margin-top: 20px; text-align: center; }
+  #upload-area h3 { font-family: "Playfair Display", serif; color: var(--gold); margin-bottom: 8px; }
+  #upload-area p { color: var(--gray); font-size: 0.9rem; margin-bottom: 16px; }
+  #upload-area .upload-btn { background: var(--gold); color: var(--navy); border: none; padding: 12px 28px; border-radius: 4px; font-family: "DM Sans", sans-serif; font-weight: 500; cursor: pointer; font-size: 0.95rem; }
+  #upload-area .upload-btn:hover { background: var(--gold2); }
+  #upload-area input[type="file"] { display: none; }
+  #upload-status { margin-top: 12px; font-size: 0.9rem; }
+
+  /* ── SERVICES SHOP SECTION ── */
+  #services-section {
+    background: var(--navy);
+    border-top: 1px solid var(--border);
+    padding: 64px 24px 80px;
+  }
+  .services-inner { max-width: 1100px; margin: 0 auto; }
+  .services-header { text-align: center; margin-bottom: 48px; }
+  .services-eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    color: var(--gold); font-size: 10px; letter-spacing: 4px;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .services-eyebrow::before, .services-eyebrow::after {
+    content: ''; display: block; width: 24px; height: 1px; background: var(--gold);
+  }
+  .services-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    color: var(--white); margin-bottom: 12px;
+  }
+  .services-header p { color: var(--gray); font-size: 0.9rem; max-width: 500px; margin: 0 auto; line-height: 1.8; }
+
+  /* Filter tabs */
+  .svc-filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 40px; }
+  .svc-filter {
+    background: transparent; border: 1px solid rgba(201,168,76,0.25);
+    color: var(--gray); padding: 7px 18px; border-radius: 3px;
+    font-family: 'DM Sans', sans-serif; font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+  }
+  .svc-filter:hover, .svc-filter.active { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.06); }
+
+  /* Grid */
+  .svc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+  .svc-card {
+    background: var(--navy2); border: 1px solid rgba(201,168,76,0.08);
+    padding: 28px 24px; display: flex; flex-direction: column;
+    position: relative; overflow: hidden; transition: border-color 0.3s, transform 0.3s;
+  }
+  .svc-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 3px; height: 0; background: var(--gold); transition: height 0.3s;
+  }
+  .svc-card:hover { border-color: rgba(201,168,76,0.3); transform: translateY(-2px); }
+  .svc-card:hover::before { height: 100%; }
+  .svc-card.hidden { display: none; }
+  .svc-tag { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); opacity: 0.75; margin-bottom: 10px; }
+  .svc-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--white); line-height: 1.35; margin-bottom: 12px; flex-grow: 1; }
+  .svc-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 20px; border-top: 1px solid rgba(201,168,76,0.1); margin-top: auto; }
+  .svc-price { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--gold); }
+  .svc-price small { display: block; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; color: var(--gray); margin-top: 2px; font-style: normal; }
+  .svc-buy {
+    background: var(--gold); color: var(--navy); border: none;
+    padding: 9px 18px; font-family: 'DM Sans', sans-serif;
+    font-size: 11px; font-weight: 500; letter-spacing: 1px;
+    text-transform: uppercase; cursor: pointer; border-radius: 3px;
+    transition: background 0.2s; white-space: nowrap;
+  }
+  .svc-buy:hover { background: var(--gold2); }
+
+  .svc-cta { text-align: center; margin-top: 48px; color: var(--gray); font-size: 0.88rem; }
+  .svc-cta a { color: var(--gold); text-decoration: none; }
+
+  @media (max-width: 900px) { .svc-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 580px) { .svc-grid { grid-template-columns: 1fr; } }
+</style>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Drua">
+  <meta name="theme-color" content="#0a1628">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+    }
+  </script>
+</head>
+<body>
+
+<!-- TERMS MODAL -->
+<div id="terms-modal">
+  <div class="terms-box">
+    <h2>Terms of Use</h2>
+    <p class="subtitle">Please read and accept before using Drua</p>
+    <div class="terms-content">
+      <h3>1. Informational Purpose Only</h3>
+      <p>Drua provides general information about FDA medical device regulations, quality systems, and related regulatory frameworks. The information provided is for educational and informational purposes only and does not constitute legal, regulatory, or professional advice.</p>
+      <h3>2. Not a Substitute for Professional Advice</h3>
+      <p>The content generated by Drua should not be relied upon as a substitute for consultation with qualified regulatory affairs professionals, legal counsel, or other licensed experts. Always seek professional guidance for your specific regulatory situation.</p>
+      <h3>3. No Guarantee of Accuracy</h3>
+      <p>While Drua strives to provide accurate and up-to-date information, regulations and guidance documents change frequently. Drua makes no warranties or representations regarding the completeness, accuracy, or timeliness of any information provided. Users are responsible for verifying all information with official FDA sources and applicable regulations.</p>
+      <h3>4. FDA Submission Disclaimer</h3>
+      <p>Drua does not prepare, review, or submit regulatory documents to the FDA or any other regulatory body on your behalf. Any content generated is a starting point only and must be reviewed, validated, and finalized by qualified professionals before use in any official regulatory submission.</p>
+      <h3>5. Limitation of Liability</h3>
+      <p>Drua Consulting and its affiliates shall not be liable for any damages, losses, or regulatory consequences arising from the use of or reliance on information provided by this service. Use of this service is entirely at your own risk.</p>
+      <h3>6. Confidentiality</h3>
+      <p>Do not share confidential, proprietary, or sensitive business information through this platform. While we take reasonable measures to protect your data, we cannot guarantee the security of information transmitted through this service.</p>
+      <h3>7. Acceptable Use</h3>
+      <p>This service is intended for medical device professionals, startups, and organizations seeking regulatory guidance. Misuse of this service, including attempts to circumvent usage limits or use the service for unlawful purposes, is strictly prohibited.</p>
+      <h3>8. Credits and Payment</h3>
+      <p>New users receive 3 complimentary questions. Additional questions require the purchase of credits. All purchases are final and non-refundable unless required by applicable law.</p>
+      <h3>9. Changes to Terms</h3>
+      <p>Drua reserves the right to modify these Terms of Use at any time. Continued use of the service constitutes acceptance of any updated terms.</p>
+      <h3>10. Governing Law</h3>
+      <p>These Terms of Use shall be governed by and construed in accordance with the laws of the State of California, without regard to its conflict of law provisions.</p>
+    </div>
+    <div class="terms-footer">
+      <label>
+        <input type="checkbox" id="terms-checkbox" onchange="toggleAccept()">
+        I have read and agree to the Terms of Use
+      </label>
+      <button id="accept-btn" onclick="acceptTerms()">Accept & Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal">
+  <div class="modal-box">
+    <h2 id="modal-title">Create Free Account</h2>
+    <p id="modal-sub">Save your conversation and continue your consultation</p>
+    <div id="auth-error"></div>
+    <input type="email" id="auth-email" placeholder="Email address" />
+    <input type="password" id="auth-password" placeholder="Password" />
+    <button class="primary" onclick="submitAuth()">Continue</button>
+    <div class="toggle" id="auth-toggle">Already have an account? <a onclick="switchMode()">Sign in</a></div>
+  </div>
+</div>
+
+<header>
+  <a href="/about.html" style="text-decoration:none;display:flex;align-items:center;gap:14px;">
+    <div style="width:44px;height:44px;flex-shrink:0;">
+      <svg viewBox="0 0 44 44" width="44" height="44" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="22,2 40,12 40,32 22,42 4,32 4,12" fill="none" stroke="#2a9d8f" stroke-width="1.5"/>
+        <polygon points="22,6 37,14.5 37,31.5 22,40 7,31.5 7,14.5" fill="#0d2137" stroke="#2a9d8f" stroke-width="0.5"/>
+        <text x="22" y="28" text-anchor="middle" font-family="'DM Sans',sans-serif" font-weight="700" font-size="18" fill="white">D</text>
+      </svg>
+    </div>
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:white;letter-spacing:3px;line-height:1;">DRUA</div>
+      <div style="width:100%;height:1px;background:var(--gold);margin:3px 0;"></div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.6rem;font-weight:600;color:var(--gold);letter-spacing:2px;text-transform:uppercase;">Regulatory &amp; Quality Consulting</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.58rem;font-style:italic;color:rgba(240,236,228,0.6);letter-spacing:0.5px;">Shaping the Future of FDA-Regulated Innovation</div>
+    </div>
+  </a>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <div id="credits-display" style="display:none;">⬡ <span id="credits-count">0</span> credits</div>
+    <a href="/about.html" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">About</a>
+    <a href="/services.html" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">Services</a>
+    <a href="/chat.html" style="background:transparent;border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">Chat with Drua</a>
+    <a href="/contact.html" style="background:transparent;border:1px solid var(--border);color:var(--gray);padding:8px 14px;border-radius:4px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">Contact</a>
+    <button id="auth-btn" onclick="toggleAuth()">Sign In</button>
+  </div>
+</header>
+
+<main>
+  <div id="hero">
+    <h1>Navigate Medical Device Regulations with Confidence</h1>
+    <p>Regulatory and quality guidance for FDA, EU MDR, and Health Canada. Generate templates instantly, then have experts review them.</p>
+    <span id="free-badge">✦ First 3 questions free — no account required</span>
+  </div>
+
+  <div id="chat-area">
+    <div id="messages"></div>
+    <div class="input-row">
+      <textarea id="question-input" rows="2" placeholder="Ask a regulatory question..."></textarea>
+      <button id="send-btn" onclick="sendMessage()">Ask Drua</button>
+    </div>
+    <div class="hint">Press Enter to send · Shift+Enter for new line</div>
+  </div>
+
+  <div id="signup-prompt">
+    <h3>You've used your 3 free questions</h3>
+    <p>Create a free account to continue your consultation and purchase additional credits.</p>
+    <button onclick="showSignup()">Create Free Account →</button>
+  </div>
+</main>
+
+<div id="no-credits">
+  <h3>Credits Required</h3>
+  <p>Purchase credits to continue your regulatory consultation.</p>
+  <div class="plans">
+    <button class="plan-btn" onclick="buyCredits('starter')"><div class="plan-name">Starter</div><div class="plan-price">$4.99</div><div class="plan-q">5 questions</div></button>
+    <button class="plan-btn" onclick="buyCredits('basic')"><div class="plan-name">Basic</div><div class="plan-price">$14.99</div><div class="plan-q">20 questions</div></button>
+    <button class="plan-btn" onclick="buyCredits('pro')"><div class="plan-name">Pro</div><div class="plan-price">$29.99</div><div class="plan-q">50 questions</div></button>
+    <button class="plan-btn" onclick="buyCredits('enterprise')"><div class="plan-name">Enterprise</div><div class="plan-price">$49.99</div><div class="plan-q">100 questions</div></button>
+  </div>
+</div>
+
+<div id="upload-area">
+  <h3>📎 Submit Your Document for Review</h3>
+  <p>Your Expert Review is confirmed! Upload your completed template and Victoria will review it within 5 business days.</p>
+  <input type="file" id="upload-input" accept=".docx,.pdf" onchange="handleFileUpload(event)">
+  <button class="upload-btn" onclick="document.getElementById('upload-input').click()">Choose File (.docx or .pdf)</button>
+  <div id="upload-status"></div>
+</div>
+
+<!-- ── CONTACT CTA ── -->
+<section style="padding: 64px 24px; text-align: center; border-top: 1px solid var(--border);">
+  <div style="max-width: 520px; margin: 0 auto;">
+    <div style="font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--gold); margin-bottom: 16px;">Work With Victoria</div>
+    <h2 style="font-family: 'Playfair Display', serif; font-size: clamp(1.6rem, 3vw, 2.2rem); color: var(--white); margin-bottom: 16px;">Ready to move forward?</h2>
+    <p style="color: var(--gray); font-size: 0.95rem; line-height: 1.8; margin-bottom: 32px;">Have a former FDA investigator personally review your submissions and quality documents. Reach out to get started.</p>
+    <a href="/contact.html" style="display: inline-block; background: var(--gold); color: var(--navy); padding: 14px 36px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.95rem; text-decoration: none; border-radius: 4px; letter-spacing: 1px;">Contact Victoria →</a>
+    <div style="margin-top: 16px;"><a href="/services.html" style="color: var(--gray); font-size: 0.85rem; text-decoration: none; border-bottom: 1px solid rgba(201,168,76,0.2);">View all services</a></div>
+  </div>
+</section>
+
+<footer>
+  <a onclick="showTerms()">Terms of Use</a> &nbsp;·&nbsp; © 2026 Drua Consulting. All rights reserved.
+</footer>
+
+<script>
+  const SUPABASE_URL = 'https://crlywtdwieikawnksqhq.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNybHl3dGR3aWVpa2F3bmtzcWhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNzgxNzIsImV4cCI6MjA4ODY1NDE3Mn0.bJkyvw4qEbLMttedRVoDXpzWg1I3m2AaBtuSHvvmq98';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const FREE_LIMIT = 3;
+  let authMode = 'signup';
+  let currentSession = null;
+
+  function getFreeCount() { return parseInt(localStorage.getItem('drua_free_used') || '0'); }
+  function incFreeCount() { localStorage.setItem('drua_free_used', getFreeCount() + 1); }
+
+  function showTerms() { document.getElementById('terms-modal').classList.add('show'); }
+  function toggleAccept() {
+    const checked = document.getElementById('terms-checkbox').checked;
+    document.getElementById('accept-btn').classList.toggle('active', checked);
+  }
+  function acceptTerms() {
+    localStorage.setItem('drua_terms_accepted', 'true');
+    document.getElementById('terms-modal').classList.remove('show');
+  }
+  function checkTerms() {
+    if (!localStorage.getItem('drua_terms_accepted')) showTerms();
+  }
+
+  function showSignup() {
+    authMode = 'signup';
+    document.getElementById('modal-title').textContent = 'Create Free Account';
+    document.getElementById('modal-sub').textContent = 'Save your conversation and continue your consultation';
+    document.getElementById('auth-toggle').innerHTML = 'Already have an account? <a onclick="switchMode()">Sign in</a>';
+    document.getElementById('auth-modal').classList.add('show');
+  }
+
+  function toggleAuth() {
+    if (currentSession) { sb.auth.signOut(); return; }
+    authMode = 'signin';
+    document.getElementById('modal-title').textContent = 'Sign In';
+    document.getElementById('modal-sub').textContent = 'Access your regulatory AI consultant';
+    document.getElementById('auth-toggle').innerHTML = 'No account? <a onclick="switchMode()">Create one</a>';
+    document.getElementById('auth-modal').classList.toggle('show');
+  }
+
+  function switchMode() {
+    authMode = authMode === 'signin' ? 'signup' : 'signin';
+    document.getElementById('modal-title').textContent = authMode === 'signin' ? 'Sign In' : 'Create Free Account';
+    document.getElementById('modal-sub').textContent = authMode === 'signin' ? 'Access your regulatory AI consultant' : 'Save your conversation and continue';
+    document.getElementById('auth-toggle').innerHTML = authMode === 'signin'
+      ? 'No account? <a onclick="switchMode()">Create one</a>'
+      : 'Already have an account? <a onclick="switchMode()">Sign in</a>';
+  }
+
+  async function submitAuth() {
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const errEl = document.getElementById('auth-error');
+    errEl.style.display = 'none';
+    const { error } = authMode === 'signin'
+      ? await sb.auth.signInWithPassword({ email, password })
+      : await sb.auth.signUp({ email, password });
+    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+    else if (authMode === 'signup') {
+      errEl.style.color = '#70c070';
+      errEl.textContent = 'Check your email to confirm your account!';
+      errEl.style.display = 'block';
+    }
+  }
+
+  async function init() {
+    checkTerms();
+    const { data } = await sb.auth.getSession();
+    if (data.session) onLogin(data.session);
+    sb.auth.onAuthStateChange((event, session) => {
+      if (session) onLogin(session);
+      else onLogout();
+    });
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      addMessage('bot', '✅ Payment successful! Your credits have been added.');
+      window.history.replaceState({}, '', '/');
+    }
+    if (!currentSession && document.getElementById('messages').children.length === 0) {
+      addMessage('bot', "Welcome to Drua! I'm your AI regulatory consultant specializing in FDA medical device regulations. Ask me anything about 510(k), PMA, De Novo, ISO 13485, EU MDR, or SaMD. Your first 3 questions are free — no account needed.");
+    }
+  }
+
+  async function onLogin(session) {
+    currentSession = session;
+    document.getElementById('auth-btn').textContent = 'Sign Out';
+    document.getElementById('auth-modal').classList.remove('show');
+    document.getElementById('credits-display').style.display = 'block';
+    document.getElementById('hero').style.display = 'none';
+    document.getElementById('signup-prompt').style.display = 'none';
+    document.getElementById('question-input').disabled = false;
+    document.getElementById('send-btn').disabled = false;
+    await loadCredits();
+    await checkPendingReview();
+  }
+
+  function onLogout() {
+    currentSession = null;
+    document.getElementById('auth-btn').textContent = 'Sign In';
+    document.getElementById('credits-display').style.display = 'none';
+    document.getElementById('hero').style.display = 'block';
+  }
+
+  async function loadCredits() {
+    if (!currentSession) return;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentSession.user.id}&select=credits`, {
+      headers: { Authorization: `Bearer ${currentSession.access_token}`, apikey: SUPABASE_ANON_KEY }
+    });
+    const data = await res.json();
+    const credits = data[0]?.credits ?? 0;
+    document.getElementById('credits-count').textContent = credits;
+    document.getElementById('no-credits').style.display = credits <= 0 ? 'block' : 'none';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (document.activeElement === document.getElementById('auth-email') || document.activeElement === document.getElementById('auth-password'))) {
+      submitAuth();
+    }
+  });
+
+  document.getElementById('question-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function addMessage(role, text) {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.innerHTML = `<div class="avatar">${role === 'bot' ? 'AI' : 'YOU'}</div><div class="bubble">${text.replace(/\n/g, '<br>')}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function addTyping() {
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'msg bot'; div.id = 'typing-indicator';
+    div.innerHTML = `<div class="avatar">AI</div><div class="bubble typing"><span></span><span></span><span></span></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('question-input');
+    const question = input.value.trim();
+    if (!question) return;
+    if (!currentSession) {
+      const used = getFreeCount();
+      if (used >= FREE_LIMIT) {
+        document.getElementById('signup-prompt').style.display = 'block';
+        document.getElementById('question-input').disabled = true;
+        document.getElementById('send-btn').disabled = true;
+        return;
+      }
+    }
+    input.value = '';
+    document.getElementById('send-btn').disabled = true;
+    addMessage('user', question);
+    addTyping();
+    try {
+      const fetchOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+      };
+      if (currentSession) fetchOptions.headers['Authorization'] = `Bearer ${currentSession.access_token}`;
+      const res = await fetch('/.netlify/functions/chat', fetchOptions);
+      const data = await res.json();
+      removeTyping();
+      if (data.error === 'no_credits') {
+        document.getElementById('no-credits').style.display = 'block';
+        addMessage('bot', 'You have no credits remaining. Please purchase credits to continue.');
+      } else if (data.answer) {
+        addMessage('bot', data.answer);
+        showTemplateButton();
+        if (data.guest) {
+          incFreeCount();
+          const remaining = FREE_LIMIT - getFreeCount();
+          if (remaining <= 0) {
+            setTimeout(() => {
+              addMessage('bot', "✦ You've used all 3 free questions. Create a free account to continue your consultation!");
+              document.getElementById('signup-prompt').style.display = 'block';
+              document.getElementById('question-input').disabled = true;
+              document.getElementById('send-btn').disabled = true;
+            }, 500);
+          } else {
+            const badge = document.getElementById('free-badge');
+            if (badge) badge.textContent = `✦ ${remaining} free question${remaining === 1 ? '' : 's'} remaining`;
+          }
+        } else {
+          document.getElementById('credits-count').textContent = data.credits_remaining;
+          if (data.credits_remaining <= 0) document.getElementById('no-credits').style.display = 'block';
+        }
+      } else {
+        addMessage('bot', `Sorry, something went wrong: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      removeTyping();
+      addMessage('bot', 'Connection error. Please try again.');
+    }
+    document.getElementById('send-btn').disabled = false;
+  }
+
+  function detectRelevantTemplates() {
+    const allText = [...document.querySelectorAll('.msg .bubble')].map(b => b.innerText.toLowerCase()).join(' ');
+    const templates = [];
+    if (/\b510\s*k\b|premarket notification|substantial equivalence|predicate device/.test(allText))
+      templates.push({ type: '510k', label: '⬇ 510(k) Submission' });
+    if (/pre.?sub(mission)?|q.?sub|presubmission/.test(allText))
+      templates.push({ type: 'presub', label: '⬇ Pre-Submission (Q-Sub)' });
+    if (/\b513\s*g\b|request for information|classification information/.test(allText))
+      templates.push({ type: '513g', label: '⬇ FDA 513(g) Request' });
+    if (/de.?novo|novel device|class ii novel|classification request/.test(allText))
+      templates.push({ type: 'denovo', label: '⬇ De Novo Request' });
+    if (templates.length === 0) return [
+      { type: '510k', label: '⬇ 510(k) Submission' },
+      { type: 'presub', label: '⬇ Pre-Submission (Q-Sub)' },
+      { type: '513g', label: '⬇ FDA 513(g) Request' },
+      { type: 'denovo', label: '⬇ De Novo Request' }
+    ];
+    return templates;
+  }
+
+  function showTemplateButton() {
+    const existing = document.getElementById('template-btn-area');
+    if (existing) existing.remove();
+    const relevant = detectRelevantTemplates();
+    const msgs = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.id = 'template-btn-area';
+    div.style.cssText = 'text-align:center;padding:16px;';
+    const btnStyle = `background:var(--gold);color:var(--navy);border:none;padding:12px 16px;border-radius:6px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;font-size:0.85rem;`;
+    const cols = relevant.length === 1 ? '1fr' : '1fr 1fr';
+    const buttons = relevant.map(t => `<button onclick="generateTemplate('${t.type}')" style="${btnStyle}">${t.label}</button>`).join('');
+    div.innerHTML = `<p style="color:var(--gray);font-size:0.85rem;margin-bottom:12px;">Ready to generate a template based on your consultation?</p><div style="display:grid;grid-template-columns:${cols};gap:10px;max-width:500px;margin:0 auto;">${buttons}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  async function generateTemplate(type) {
+    if (!currentSession) { showSignup(); return; }
+    const btns = document.querySelectorAll('#template-btn-area button');
+    btns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+    const clickedBtn = event.target;
+    clickedBtn.textContent = 'Generating...';
+    const msgs = [...document.querySelectorAll('.msg')].map(m => ({
+      role: m.classList.contains('user') ? 'user' : 'bot',
+      text: m.querySelector('.bubble')?.innerText || ''
+    }));
+    try {
+      const res = await fetch('/.netlify/functions/generate-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        body: JSON.stringify({ templateType: type, conversation: msgs })
+      });
+      const data = await res.json();
+      if (data.docx_base64) {
+        const bytes = Uint8Array.from(atob(data.docx_base64), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = data.filename; a.click();
+        URL.revokeObjectURL(url);
+        clickedBtn.textContent = '✅ Downloaded!';
+        btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+      } else {
+        clickedBtn.textContent = 'Error — Try Again';
+        btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+      }
+    } catch {
+      clickedBtn.textContent = 'Error — Try Again';
+      btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+    }
+  }
+
+  async function buyCredits(plan) {
+    if (!currentSession) { showSignup(); return; }
+    try {
+      const res = await fetch('/.netlify/functions/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        body: JSON.stringify({ plan })
+      });
+      const data = await res.json();
+      if (data.checkout_url) window.top.location.href = data.checkout_url;
+    } catch (err) { alert('Error initiating checkout. Please try again.'); }
+  }
+
+  async function buyReview(service) {
+    if (!currentSession) { showSignup(); return; }
+    try {
+      const res = await fetch('/.netlify/functions/review-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+        body: JSON.stringify({ service })
+      });
+      const data = await res.json();
+      if (data.checkout_url) window.top.location.href = data.checkout_url;
+    } catch (err) { alert('Error initiating checkout. Please try again.'); }
+  }
+
+  async function checkPendingReview() {
+    if (!currentSession) return;
+    const { data } = await sb.from('reviews').select('*').eq('user_id', currentSession.user.id).eq('status', 'paid').is('file_url', null).limit(1);
+    if (data && data.length > 0) document.getElementById('upload-area').style.display = 'block';
+  }
+
+  async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const statusEl = document.getElementById('upload-status');
+    statusEl.style.color = 'var(--gold)';
+    statusEl.textContent = 'Uploading...';
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target.result.split(',')[1];
+      try {
+        const res = await fetch('/.netlify/functions/upload-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
+          body: JSON.stringify({ filename: file.name, filedata: base64, contentType: file.type })
+        });
+        const data = await res.json();
+        if (data.success) {
+          statusEl.style.color = '#70c070';
+          statusEl.textContent = '✅ ' + data.message;
+          document.querySelector('#upload-area .upload-btn').disabled = true;
+          document.querySelector('#upload-area .upload-btn').style.opacity = '0.5';
+        } else {
+          statusEl.style.color = '#e07070';
+          statusEl.textContent = '❌ ' + (data.error || 'Upload failed. Please try again.');
+        }
+      } catch (err) {
+        statusEl.style.color = '#e07070';
+        statusEl.textContent = '❌ Connection error. Please try again.';
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Services section filter
+  document.querySelectorAll('.svc-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.svc-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.dataset.svcFilter;
+      document.querySelectorAll('.svc-card').forEach(card => {
+        if (filter === 'all' || card.dataset.svcCat === filter) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    });
+  });
+
+  init();
+</script>
+</body>
+</html>
