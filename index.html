@@ -593,37 +593,22 @@
 
   async function generateTemplate(type) {
     if (!currentSession) { showSignup(); return; }
-    const btns = document.querySelectorAll('#template-btn-area button');
-    btns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
-    const clickedBtn = event.target;
-    clickedBtn.textContent = 'Generating...';
-    const msgs = [...document.querySelectorAll('.msg')].map(m => ({
-      role: m.classList.contains('user') ? 'user' : 'bot',
-      text: m.querySelector('.bubble')?.innerText || ''
-    }));
-    try {
-      const res = await fetch('/.netlify/functions/generate-template', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentSession.access_token}` },
-        body: JSON.stringify({ templateType: type, conversation: msgs })
-      });
-      const data = await res.json();
-      if (data.docx_base64) {
-        const bytes = Uint8Array.from(atob(data.docx_base64), c => c.charCodeAt(0));
-        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = data.filename; a.click();
-        URL.revokeObjectURL(url);
-        clickedBtn.textContent = '✅ Downloaded!';
-        btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
-      } else {
-        clickedBtn.textContent = 'Error — Try Again';
-        btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
-      }
-    } catch {
-      clickedBtn.textContent = 'Error — Try Again';
-      btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
-    }
+    const urls = {
+      '510k':   '/templates/Drua_510k_Template.docx',
+      'presub': '/templates/Drua_PreSub_Template.docx',
+      '513g':   '/templates/Drua_513g_Template.docx',
+      'denovo': '/templates/Drua_DeNovo_Template.docx'
+    };
+    const names = {
+      '510k':   'Drua_510k_Template.docx',
+      'presub': 'Drua_PreSub_Template.docx',
+      '513g':   'Drua_513g_Template.docx',
+      'denovo': 'Drua_DeNovo_Template.docx'
+    };
+    const a = document.createElement('a');
+    a.href = urls[type];
+    a.download = names[type];
+    a.click();
   }
 
   async function buyCredits(plan) {
